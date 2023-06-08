@@ -24,6 +24,10 @@ from pandas.api.types import is_list_like
 from typing import List, Dict, Any, Union
 
 
+def test():
+    print ("Hello World!")
+
+
 def get_runs(project: str = "openvalidators", filters: Dict[str, Any] = None, return_paths: bool = False) -> List:
     """Download runs from wandb.
 

@@ -1,3 +1,3 @@
 import streamlit as st
-from utils.utils import get_data
+from utils.utils import test
 st.write('HELLO BOITCHES')
