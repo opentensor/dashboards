@@ -24,10 +24,6 @@ from pandas.api.types import is_list_like
 from typing import List, Dict, Any, Union
 
 
-def test():
-    print ("Hello World!")
-
-
 def get_runs(project: str = "openvalidators", filters: Dict[str, Any] = None, return_paths: bool = False) -> List:
     """Download runs from wandb.
 
@@ -78,6 +74,7 @@ def download_data(run_path: Union[str, List] = None, timeout: float = 600) -> pd
         pbar.set_postfix({"total_events": total_events})
 
     df = pd.concat(frames)
+
     # Convert timestamp to datetime.
     df._timestamp = pd.to_datetime(df._timestamp, unit="s")
     df.sort_values("_timestamp", inplace=True)
@@ -95,7 +92,7 @@ def load_data(path: str, nrows: int = None):
     list_cols = [c for c in df.columns if df[c].dtype == "object" and df[c].str.startswith("[").all()]
     # convert string representation of list to list
     df[list_cols] = df[list_cols].applymap(eval, na_action='ignore')
-
+    
     return df
 
 
@@ -128,4 +125,4 @@ def get_list_col_lengths(df: pd.DataFrame) -> Dict[str, int]:
     if len(varying_lengths) > 0:
         print(f"The following columns have varying lengths: {varying_lengths}")
 
-    return {c: v[0] for c, v in list_col_lengths.items()}
+    return {c: v[0] for c, v in list_col_lengths.items() if v}

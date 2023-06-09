@@ -53,7 +53,7 @@ def plot_weights(scores: pd.DataFrame, ntop: int = 20, uids: List[Union[str, int
     """
 
     # Select subset of columns for plotting
-    if uids is None:
+    if not uids:
         uids = scores.columns[:ntop]
         print(f"Using first {ntop} uids for plotting: {uids}")
 
@@ -249,6 +249,7 @@ def plot_leaderboard(
     else:
         index = rankings.index.astype(str)
 
+    print(f"Using top {ntop} {group_on} by {agg_col}: \n{rankings}")
     return px.bar(
         x=rankings,
         y=index,
