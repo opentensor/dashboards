@@ -36,7 +36,7 @@ def get_runs(project: str = "openvalidators", filters: Dict[str, Any] = None, re
         List[wandb.apis.public.Run]: List of runs or run paths (List[str]).
     """
     api = wandb.Api()
-    wandb.login()
+    wandb.login(anonymous="allow")
 
     runs = api.runs(project, filters=filters)
     if return_paths:
@@ -56,7 +56,7 @@ def download_data(run_path: Union[str, List] = None, timeout: float = 600) -> pd
         pd.DataFrame: Dataframe of event log.
     """
     api = wandb.Api(timeout=timeout)
-    wandb.login()
+    wandb.login(anonymous="allow")
 
     if isinstance(run_path, str):
         run_path = [run_path]
