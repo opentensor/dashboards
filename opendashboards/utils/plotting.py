@@ -88,7 +88,7 @@ def plot_uid_diversty(df: pd.DataFrame, remove_unsuccessful: bool = False) -> go
         frames.append(frame)
 
     merged = pd.merge(*frames, left_index=True, right_index=True, suffixes=("_followup", "_answer"))
-    merged["reward_mean"] = merged.filter(regex="rewards_mean").mean(axis=1)
+    merged["reward_mean"] = merged.filter(regex="rewards_mean").mean(axis=1).astype(float)
 
     merged.index.name = "UID"
     merged.reset_index(inplace=True)
@@ -243,7 +243,7 @@ def plot_leaderboard(
     """
     df = df[[group_on, agg_col]].explode(column=[group_on, agg_col])
 
-    rankings = df.groupby(group_on)[agg_col].agg(agg).sort_values(ascending=False).head(ntop)
+    rankings = df.groupby(group_on)[agg_col].agg(agg).sort_values(ascending=False).head(ntop).astype(float)
     if alias:
         index = rankings.index.map({name: str(i) for i, name in enumerate(rankings.index)})
     else:
@@ -251,7 +251,7 @@ def plot_leaderboard(
 
     print(f"Using top {ntop} {group_on} by {agg_col}: \n{rankings}")
     return px.bar(
-        x=rankings.astype(float),
+        x=rankings,
         y=index,
         color=rankings,
         orientation="h",
