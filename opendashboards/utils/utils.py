@@ -24,7 +24,7 @@ from pandas.api.types import is_list_like
 from typing import List, Dict, Any, Union
 
 
-def get_runs(project: str = "openvalidators", filters: Dict[str, Any] = None, return_paths: bool = False) -> List:
+def get_runs(project: str = "openvalidators", filters: Dict[str, Any] = None, return_paths: bool = False, api_key: str = None) -> List:
     """Download runs from wandb.
 
     Args:
@@ -35,8 +35,8 @@ def get_runs(project: str = "openvalidators", filters: Dict[str, Any] = None, re
     Returns:
         List[wandb.apis.public.Run]: List of runs or run paths (List[str]).
     """
-    api = wandb.Api()
-    wandb.login()
+    api = wandb.Api(api_key=api_key)
+    wandb.login(anonymous="allow")
 
     runs = api.runs(project, filters=filters)
     if return_paths:
@@ -45,7 +45,7 @@ def get_runs(project: str = "openvalidators", filters: Dict[str, Any] = None, re
         return runs
 
 
-def download_data(run_path: Union[str, List] = None, timeout: float = 600) -> pd.DataFrame:
+def download_data(run_path: Union[str, List] = None, timeout: float = 600, api_key: str = None) -> pd.DataFrame:
     """Download data from wandb.
 
     Args:
@@ -55,8 +55,8 @@ def download_data(run_path: Union[str, List] = None, timeout: float = 600) -> pd
     Returns:
         pd.DataFrame: Dataframe of event log.
     """
-    api = wandb.Api(timeout=timeout)
-    wandb.login()
+    api = wandb.Api(api_key=api_key, timeout=timeout)
+    wandb.login(anonymous="allow")
 
     if isinstance(run_path, str):
         run_path = [run_path]

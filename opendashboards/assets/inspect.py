@@ -3,7 +3,6 @@ import streamlit as st
 import pandas as pd
 import opendashboards.utils.utils as utils
 
-
 @st.cache_data
 def explode_data(df):
     list_cols = utils.get_list_col_lengths(df)

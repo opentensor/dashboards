@@ -5,13 +5,12 @@ import streamlit as st
 
 import  opendashboards.utils.utils as utils
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 @st.cache_data
 def load_runs(project, filters, min_steps=10):
     runs = []
     msg = st.empty()
-    for run in utils.get_runs(project, filters):
+    for run in utils.get_runs(project, filters, api_key=st.secrets['WANDB_API_KEY']):
         step = run.summary.get('_step',0)
         if step < min_steps:
             msg.warning(f'Skipped run `{run.name}` because it contains {step} events (<{min_steps})')
@@ -48,17 +47,19 @@ def load_data(selected_runs, load=True, save=False):
 
     frames = []
     n_events = 0
+    successful = 0
     progress = st.progress(0, 'Loading data')
     info = st.empty()
+    if not os.path.exists('data/'):
+        os.makedirs('data/')
     for i, idx in enumerate(selected_runs.index):
         run = selected_runs.loc[idx]
-        prog_msg = f'Loading data {i/len(selected_runs)*100:.0f}% ({i}/{len(selected_runs)} runs, {n_events} events)'
+        prog_msg = f'Loading data {i/len(selected_runs)*100:.0f}% ({successful}/{len(selected_runs)} runs, {n_events} events)'
 
-        rel_path = os.path.join('data',f'history-{run.id}.csv')
-        file_path = os.path.join(BASE_DIR,rel_path)
+        file_path = os.path.join('data',f'history-{run.id}.csv')
 
         if load and os.path.exists(file_path):
-            progress.progress(i/len(selected_runs),f'{prog_msg}... **reading** `{rel_path}`')
+            progress.progress(i/len(selected_runs),f'{prog_msg}... **reading** `{file_path}`')
             try:
                 df = utils.load_data(file_path)
             except Exception as e:
@@ -70,9 +71,8 @@ def load_data(selected_runs, load=True, save=False):
             try:
                 # Download the history from wandb
                 df = utils.download_data(run.path)
+                # Add metadata to the dataframe
                 df.assign(**run.to_dict())
-                if not os.path.exists('data/'):
-                    os.makedirs(file_path)
 
                 if save and run.state != 'running':
                     df.to_csv(file_path, index=False)
@@ -84,6 +84,7 @@ def load_data(selected_runs, load=True, save=False):
 
         frames.append(df)
         n_events += df.shape[0]
+        successful += 1
 
     progress.empty()
     if not frames:
