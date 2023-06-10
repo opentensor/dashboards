@@ -1,6 +1,6 @@
 
 import streamlit as st
-import utils.plotting as plotting
+import opendashboards.utils.plotting as plotting
 
 # @st.cache_data
 def uid_diversty(df, rm_failed=True):

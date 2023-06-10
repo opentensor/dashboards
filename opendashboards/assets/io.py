@@ -5,7 +5,8 @@ import streamlit as st
 
 import  opendashboards.utils.utils as utils
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = '.'#os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+print(f'BASE_DIR = {BASE_DIR}')
 
 @st.cache_data
 def load_runs(project, filters, min_steps=10):
