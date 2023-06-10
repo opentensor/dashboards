@@ -12,7 +12,7 @@ print(f'BASE_DIR = {BASE_DIR}')
 def load_runs(project, filters, min_steps=10):
     runs = []
     msg = st.empty()
-    for run in utils.get_runs(project, filters):
+    for run in utils.get_runs(project, filters, api_key=st.secrets['WANDB_API_KEY']):
         step = run.summary.get('_step',0)
         if step < min_steps:
             msg.warning(f'Skipped run `{run.name}` because it contains {step} events (<{min_steps})')
