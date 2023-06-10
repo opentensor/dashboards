@@ -51,7 +51,7 @@ def load_data(selected_runs, load=True, save=False):
     progress = st.progress(0, 'Loading data')
     info = st.empty()
     if not os.path.exists('data/'):
-        os.makedirs(file_path)
+        os.makedirs('data/')
     for i, idx in enumerate(selected_runs.index):
         run = selected_runs.loc[idx]
         prog_msg = f'Loading data {i/len(selected_runs)*100:.0f}% ({successful}/{len(selected_runs)} runs, {n_events} events)'
