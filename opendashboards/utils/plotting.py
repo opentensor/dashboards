@@ -251,7 +251,7 @@ def plot_leaderboard(
 
     print(f"Using top {ntop} {group_on} by {agg_col}: \n{rankings}")
     return px.bar(
-        x=rankings,
+        x=rankings.astype(float),
         y=index,
         color=rankings,
         orientation="h",
