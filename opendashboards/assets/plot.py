@@ -8,6 +8,8 @@ def uid_diversty(df, rm_failed=True):
         plotting.plot_uid_diversty(
             df,
             remove_unsuccessful=rm_failed
+        ).update_layout(
+            coloraxis_showscale=False,
         ),
         use_container_width=True
     )
@@ -22,6 +24,8 @@ def leaderboard(df, ntop, group_on, agg_col, agg, alias=False):
             agg_col=agg_col,
             agg=agg,
             alias=alias
+        ).update_layout(
+            coloraxis_showscale=False,
         ),
         use_container_width=True
     )
