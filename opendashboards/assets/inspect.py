@@ -52,3 +52,6 @@ def run_event_data(df_runs, df, selected_runs):
                         "url": st.column_config.LinkColumn("URL"),
                     }
         )
+        
+def highlight_row(row, expr, color='lightgrey', bg_color='white'):
+    return [f'background-color:{color}' if expr else f'background-color:{bg_color}'] * len(row)

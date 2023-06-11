@@ -97,8 +97,8 @@ def plot_uid_diversty(df: pd.DataFrame, remove_unsuccessful: bool = False) -> go
         merged,
         x="diversity_followup",
         y="diversity_answer",
-        opacity=0.3,
-        size="followup_completions_size",
+        opacity=0.35,
+        # size="followup_completions_size",
         color="reward_mean",
         hover_data=["UID"] + merged.columns.tolist(),
         marginal_x="histogram",
@@ -219,7 +219,7 @@ def plot_completion_rewards(
         labels={"rank": "Rank", reward_col: "Reward", time_col: ""},
         title=f"Rewards for {len(completions)} Messages",
         **plotly_config,
-        opacity=0.3,
+        opacity=0.35,
     )
 
 
@@ -258,10 +258,11 @@ def plot_leaderboard(
         labels={"x": f"{agg_col.title()}", "y": group_on, "color": ""},
         title=f"Leaderboard for {agg_col}, top {ntop} {group_on}",
         color_continuous_scale="BlueRed",
-        opacity=0.5,
+        opacity=0.35,
         hover_data=[rankings.index.astype(str)],
         **plotly_config,
     )
+
 
 
 def plot_dendrite_rates(
@@ -297,10 +298,38 @@ def plot_dendrite_rates(
         barmode="group",
         title="Dendrite Calls by UID",
         color_continuous_scale="Blues",
-        opacity=0.5,
+        opacity=0.35,
         **plotly_config,
     )
 
+def plot_completion_length_time(
+    df: pd.DataFrame,
+    uid_col: str = "answer_uids",
+    completion_col: str = "answer_completions",
+    time_col: str = "answer_times",
+    words: bool = False,    
+) -> go.Figure:
+    
+    df = df[[uid_col, completion_col, time_col]].explode(column=[uid_col, completion_col, time_col])
+    df["time"] = df[time_col].astype(float)
+    if words:
+        df["completion_length"] = df[completion_col].str.split().str.len()
+    else:
+        df["completion_length"] = df[completion_col].str.len()
+    
+    return px.scatter(
+        df,
+        x='completion_length',
+        y='time',
+        labels={"completion_length": f"Completion Length, {'Words' if words else 'Characters'}", "time": "Time (s)"},
+        title=f"Completion Length vs Time, {'Words' if words else 'Characters'}",
+        marginal_x="histogram",
+        marginal_y="histogram",
+        hover_data=[uid_col, completion_col],
+        opacity=0.35,
+        **plotly_config,
+    )
+            
 
 def plot_network_embedding(
     df: pd.DataFrame,
@@ -358,6 +387,6 @@ def plot_network_embedding(
         title=f"Graph for Top {ntop} Completion Similarities",
         color_continuous_scale="BlueRed",
         hover_data=["UID", "top_completions"],
-        opacity=0.5,
+        opacity=0.35,
         **plotly_config,
     )

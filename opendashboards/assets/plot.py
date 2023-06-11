@@ -54,3 +54,15 @@ def weights(df, uids, ntop=10):
         ),
         use_container_width=True
     )
+
+def completion_length_time(df, completion_col, uid_col, time_col, words=False):
+    return st.plotly_chart(
+        plotting.plot_completion_length_time(
+            df,
+            uid_col=uid_col,
+            completion_col=completion_col,
+            time_col=time_col,
+            words=words
+        ),
+        use_container_width=True
+    )

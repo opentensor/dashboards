@@ -18,11 +18,11 @@ def wandb(df_runs):
 
 
 @st.cache_data
-def runs(df, df_long, selected_runs):
+def runs(df_long):
 
     col1, col2, col3 = st.columns(3)
-    col1.metric(label="Runs", value=len(selected_runs))
-    col1.metric(label="Events", value=df.shape[0]) #
+    col1.metric(label="Runs", value=df_long.run_id.nunique())
+    col1.metric(label="Events", value=df_long.shape[0]) 
     col2.metric(label="Followup UIDs", value=df_long.followup_uids.nunique())
     col2.metric(label="Answer UIDs", value=df_long.answer_uids.nunique())
     col3.metric(label="Followup Completions", value=df_long.followup_completions.nunique())
