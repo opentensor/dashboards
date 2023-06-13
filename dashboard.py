@@ -40,13 +40,13 @@ with st.spinner(text=f'Checking wandb...'):
 
 
 ### Wandb Runs ###
-with st.sidebar:
+# with st.sidebar:
 
-    st.markdown('#')
-    st.sidebar.header(":violet[Select] Runs")
+#     st.markdown('#')
+#     st.sidebar.header(":violet[Select] Runs")
 
-    df_runs_subset = io.filter_dataframe(df_runs, demo_selection=df_runs.id.isin(DEFAULT_SELECTED_RUNS))
-    n_runs = len(df_runs_subset)
+    # df_runs_subset = io.filter_dataframe(df_runs, demo_selection=df_runs.id.isin(DEFAULT_SELECTED_RUNS))
+    # n_runs = len(df_runs_subset)
 
 metric.wandb(df_runs)
 
@@ -64,26 +64,28 @@ with tab1:
     st.subheader(":violet[Run] Data")
     with st.expander(f'Show :violet[raw] wandb data'):
 
-        filter_selected_checkbox = st.checkbox('Filter to selected runs', value=True)
-        df_to_show = df_runs_subset if filter_selected_checkbox else df_runs
+        # filter_selected_checkbox = st.checkbox('Filter to selected runs', value=True)
+        # df_to_show = df_runs_subset if filter_selected_checkbox else df_runs
 
-        # TODO: make this editable so that runs can be selected directly from the table
-        st.dataframe(
-            df_to_show.assign(
-                Selected=df_to_show.index.isin(df_runs_subset.index)
-            ).set_index('Selected').sort_index(ascending=False),#.style.highlight_max(subset=df_runs_subset.index, color='lightgreen', axis=1),
+        edited_df = st.data_editor(
+            df_runs.assign(Select=False).set_index('Select'),
+            column_config={"Select": st.column_config.CheckboxColumn(required=True)},
+            disabled=df_runs.columns,
             use_container_width=True,
         )
+        df_runs_subset = df_runs[edited_df.index==True]
+        n_runs = len(df_runs_subset)
 
     if n_runs:
         df = io.load_data(df_runs_subset, load=True, save=True)
+        df = inspect.clean_data(df)
         df_long = inspect.explode_data(df)
         df_weights = inspect.weights(df)
     else:
         st.info(f'You must select at least one run to load data')
         st.stop()
 
-    metric.runs(df_long)
+    metric.runs(df_long, n_runs)
 
     st.markdown('#')
     st.subheader(":violet[Event] Data")
@@ -93,10 +95,12 @@ with tab1:
         num_rows = raw_data_col2.slider('Number of rows:', min_value=1, max_value=100, value=10, key='num_rows')
         st.dataframe(df_long.head(num_rows) if use_long_checkbox else df.head(num_rows),
                      use_container_width=True)
-        
+
 
 
 ### UID Health ###
+# TODO: Live time - time elapsed since moving_averaged_score for selected UID was 0 (lower bound so use >Time)
+# TODO: Weight - Most recent weight for selected UID (Add warning if weight is 0 or most recent timestamp is not current)
 with tab2:
 
     st.markdown('#')
@@ -106,10 +110,31 @@ with tab2:
     uid_src = st.radio('Select one:', ['followup', 'answer'], horizontal=True, key='uid_src')
 
     metric.uids(df_long, uid_src)
+    uids = st.multiselect('UID:', sorted(df_long[f'{uid_src}_uids'].unique()), key='uid')
+    with st.expander(f'Show UID health data for **{n_runs} selected runs** and **{len(uids)} selected UIDs**'):
+        st.markdown('#')
+        st.subheader(f"UID {uid_src.title()} :violet[Health]")
+        agg_uid_checkbox = st.checkbox('Aggregate UIDs', value=True)
+        if agg_uid_checkbox:
+            metric.uids(df_long, uid_src, uids)
+        else:
+            for uid in uids:
+                st.caption(f'UID: {uid}')
+                metric.uids(df_long, uid_src, [uid])
 
-    with st.expander(f'Show UID **{uid_src}** weights data for **{n_runs} selected runs**'):
+        st.subheader(f'Cumulative completion frequency')
 
-        uids = st.multiselect('UID:', sorted(df_long[f'{uid_src}_uids'].unique()), key='uid')
+        freq_col1, freq_col2 = st.columns(2)
+        freq_ntop = freq_col1.slider('Number of Completions:', min_value=10, max_value=1000, value=100, key='freq_ntop')
+        freq_rm_empty = freq_col2.checkbox('Remove empty (failed)', value=True, key='freq_rm_empty')
+        freq_cumulative = freq_col2.checkbox('Cumulative', value=False, key='freq_cumulative')
+        freq_normalize = freq_col2.checkbox('Normalize', value=True, key='freq_normalize')
+
+        plot.uid_completion_counts(df_long, uids=uids, src=uid_src, ntop=freq_ntop, rm_empty=freq_rm_empty, cumulative=freq_cumulative, normalize=freq_normalize)
+
+
+    with st.expander(f'Show UID weights data for **{n_runs} selected runs** and **{len(uids)} selected UIDs**'):
+
         st.markdown('#')
         st.subheader(f"UID {uid_src.title()} :violet[Weights]")
 
@@ -189,6 +214,7 @@ with tab3:
             ntop=completion_ntop,
             completions=completion_select,
         )
+        # TODO: show the UIDs which have used the selected completions
 
 
     with st.expander(f'Show **{completion_src}** completion length data for **{n_runs} selected runs**'):

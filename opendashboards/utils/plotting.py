@@ -249,7 +249,6 @@ def plot_leaderboard(
     else:
         index = rankings.index.astype(str)
 
-    print(f"Using top {ntop} {group_on} by {agg_col}: \n{rankings}")
     return px.bar(
         x=rankings,
         y=index,
@@ -307,16 +306,16 @@ def plot_completion_length_time(
     uid_col: str = "answer_uids",
     completion_col: str = "answer_completions",
     time_col: str = "answer_times",
-    words: bool = False,    
+    words: bool = False,
 ) -> go.Figure:
-    
+
     df = df[[uid_col, completion_col, time_col]].explode(column=[uid_col, completion_col, time_col])
     df["time"] = df[time_col].astype(float)
     if words:
         df["completion_length"] = df[completion_col].str.split().str.len()
     else:
         df["completion_length"] = df[completion_col].str.len()
-    
+
     return px.scatter(
         df,
         x='completion_length',
@@ -329,7 +328,44 @@ def plot_completion_length_time(
         opacity=0.35,
         **plotly_config,
     )
-            
+
+def plot_uid_completion_counts(
+    df: pd.DataFrame,
+    uids: List[int],
+    src: str = 'answer',
+    rm_empty: bool = True,
+    ntop: int = 100,
+    cumulative: bool = False,
+    normalize: bool = True,
+) -> go.Figure:
+
+    completion_col = f'{src}_completions'
+    uid_col = f'{src}_uids'
+    if rm_empty:
+        df = df.loc[df[completion_col].str.len()>0]
+
+    df = df.loc[df[uid_col].isin(uids)]
+
+    g = df.groupby(uid_col)[completion_col].value_counts(normalize=normalize).reset_index(level=1)
+    y_col = g.columns[-1]
+
+    # rescale each group to have a max of 1 if normalize is True
+    if cumulative:
+        g[y_col] = g.groupby(level=0)[y_col].cumsum().transform(lambda x: x/x.max() if normalize else x)
+
+    # get top n completions
+    g = g.groupby(level=0).head(ntop)
+
+    # # create a rank column which increments by one and resets when the uid changes
+    g['rank'] = g.groupby(level=0).cumcount()+1
+
+    return px.line(g.sort_index().reset_index(),
+            x='rank',y=y_col,color=uid_col,
+            labels={'rank':'Top Completions',uid_col:'UID',y_col:y_col.replace('_',' ').title()},
+            title=f'{src.title()} Completion {y_col.replace("_"," ").title()}s by Rank',
+            **plotly_config,
+            ).update_traces(opacity=0.7)
+
 
 def plot_network_embedding(
     df: pd.DataFrame,

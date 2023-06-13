@@ -3,6 +3,9 @@ import streamlit as st
 import pandas as pd
 import opendashboards.utils.utils as utils
 
+def clean_data(df):
+    return df.dropna(subset=df.filter(regex='completions|rewards').columns, how='all')
+
 @st.cache_data
 def explode_data(df):
     list_cols = utils.get_list_col_lengths(df)
@@ -28,10 +31,10 @@ def weights(df, index='_timestamp'):
 
     # rename columns
     scores.rename({i: f'UID-{i}' for i in range(scores.shape[1])}, axis=1, inplace=True)
-    return scores    
-    
+    return scores
+
 def run_event_data(df_runs, df, selected_runs):
-    
+
     st.markdown('#')
 
     show_col1, show_col2 = st.columns(2)
@@ -52,6 +55,6 @@ def run_event_data(df_runs, df, selected_runs):
                         "url": st.column_config.LinkColumn("URL"),
                     }
         )
-        
+
 def highlight_row(row, expr, color='lightgrey', bg_color='white'):
     return [f'background-color:{color}' if expr else f'background-color:{bg_color}'] * len(row)

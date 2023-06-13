@@ -66,3 +66,17 @@ def completion_length_time(df, completion_col, uid_col, time_col, words=False):
         ),
         use_container_width=True
     )
+
+def uid_completion_counts(df, uids, src, rm_empty, ntop=100, cumulative=False, normalize=True):
+    return st.plotly_chart(
+        plotting.plot_uid_completion_counts(
+            df,
+            uids=uids,
+            src=src,
+            rm_empty=rm_empty,
+            ntop=ntop,
+            cumulative=cumulative,
+            normalize=normalize
+        ),
+        use_container_width=True
+    )

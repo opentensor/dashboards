@@ -16,15 +16,25 @@ from pandas.api.types import (
 @st.cache_data
 def load_runs(project, filters, min_steps=10):
     runs = []
+    n_events = 0
+    successful = 0
+    progress = st.progress(0, 'Fetching runs from wandb')
     msg = st.empty()
-    for run in utils.get_runs(project, filters, api_key=st.secrets['WANDB_API_KEY']):
-        step = run.summary.get('_step',0)
+
+    all_runs = utils.get_runs(project, filters, api_key=st.secrets['WANDB_API_KEY'])
+    for i, run in enumerate(all_runs):
+        
+        summary = run.summary
+        step = summary.get('_step',0)
         if step < min_steps:
             msg.warning(f'Skipped run `{run.name}` because it contains {step} events (<{min_steps})')
             continue
-
-        duration = run.summary.get('_runtime')
-        end_time = run.summary.get('_timestamp')
+        
+        prog_msg = f'Loading data {i/len(all_runs)*100:.0f}% ({successful}/{len(all_runs)} runs, {n_events} events)'
+        progress.progress(i/len(all_runs),f'{prog_msg}... **fetching** `{run.name}`')
+        
+        duration = summary.get('_runtime')
+        end_time = summary.get('_timestamp')
         # extract values for selected tags
         rules = {'hotkey': re.compile('^[0-9a-z]{48}$',re.IGNORECASE), 'version': re.compile('^\\d\.\\d+\.\\d+$'), 'spec_version': re.compile('\\d{4}$')}
         tags = {k: tag for k, rule in rules.items() for tag in run.tags if rule.match(tag)}
@@ -34,6 +44,7 @@ def load_runs(project, filters, min_steps=10):
         runs.append({
             'state': run.state,
             'num_steps': step,
+            'num_completions': step*sum(len(v) for k, v in run.summary.items() if k.endswith('completions') and isinstance(v, list)),
             'entity': run.entity,
             'id': run.id,
             'name': run.name,
@@ -42,9 +53,13 @@ def load_runs(project, filters, min_steps=10):
             'path': os.path.join(run.entity, run.project, run.id),
             'start_time': pd.to_datetime(end_time-duration, unit="s"),
             'end_time': pd.to_datetime(end_time, unit="s"),
-            'duration': pd.to_datetime(duration, unit="s"),
+            'duration': pd.to_timedelta(duration, unit="s").round('s'),
             **tags
         })
+        n_events += step
+        successful += 1
+
+    progress.empty()
     msg.empty()
     return pd.DataFrame(runs).astype({'state': 'category', 'hotkey': 'category', 'version': 'category', 'spec_version': 'category'})
 
