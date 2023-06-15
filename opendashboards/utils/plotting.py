@@ -198,7 +198,11 @@ def plot_completion_rewards(
         else:
             completions = completion_counts.index[:ntop]
             print(f"Using top {len(completions)} completions: \n{completions}")
-
+    else:
+        found_completions = [c for c in completions if c in completion_counts.index]
+        print(f"Using {len(found_completions)}/{len(completions)} completions: \n{found_completions}")
+        completions = found_completions
+        
     # Get ranks of completions in terms of number of occurrences
     ranks = completion_counts.rank(method="dense", ascending=False).loc[completions].astype(int)
 

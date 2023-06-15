@@ -9,7 +9,7 @@ from opendashboards.assets import io, inspect, metric, plot
 # Hotkey churn
 
 DEFAULT_PROJECT = "openvalidators"
-DEFAULT_FILTERS = {"tags": {"$in": ["1.0.0", "1.0.1", "1.0.2", "1.0.3", "1.0.4"]}}
+DEFAULT_FILTERS = {"tags": {"$in": [f'1.0.{i}' for i in range(10)]}}
 DEFAULT_SELECTED_RUNS = ['kt9bzxii']
 DEFAULT_SELECTED_HOTKEYS = None
 DEFAULT_SRC = 'followup'
