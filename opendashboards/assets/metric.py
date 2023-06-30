@@ -33,15 +33,26 @@ def wandb(df_runs):
 
 
 @st.cache_data
-def runs(df_long, n_runs):
+def runs(df_long):
+    
+    col1, col2, col3, col4 = st.columns(4)
+    print(df_long.columns)
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric(label="Runs", value=n_runs)
-    col1.metric(label="Events", value=df_long.shape[0])
-    col2.metric(label="Followup UIDs", value=df_long.followup_uids.nunique())
-    col2.metric(label="Answer UIDs", value=df_long.answer_uids.nunique())
-    col3.metric(label="Unique Followups", value=df_long.followup_completions.nunique())
-    col3.metric(label="Unique Answers", value=df_long.answer_completions.nunique())
+    # Convert to appropriate units e.g. 1.2k instead of 1200.c
+    col1.metric('Runs', fmt(df_long.run_id.nunique()))
+    col2.metric('Hotkeys', fmt(df_long.hotkey.nunique()))
+    col3.metric('Events', fmt(df_long.groupby(['run_id','_step']).ngroups))
+    col4.metric('Completions', fmt(df_long.shape[0]))
+    
+    name_type = df_long.name.apply(lambda x: x if not x[-1].isdigit() else x[:-1])
+    aggs = df_long.groupby(name_type).agg({'uids': 'nunique', 'completions': 'nunique'})
+    print(aggs)
+    for i,c in enumerate(st.columns(len(aggs))):
+        name = aggs.index[i].title()
+        uid_unique, comp_unique = aggs.iloc[i]
+        c.metric(label=f'{name} UIDs', value=uid_unique) 
+        c.metric(label=f'{name} Completions', value=comp_unique)
+
     st.markdown('----')
 
 
@@ -49,30 +60,28 @@ def runs(df_long, n_runs):
 @st.cache_data
 def uids(df_long, src, uids=None):
 
-    uid_col = f'{src}_uids'
-    completion_col = f'{src}_completions'
     nsfw_col = f'{src}_nsfw_scores'
-    reward_col = f'{src}_rewards'
 
     if uids:
-        df_long = df_long.loc[df_long[uid_col].isin(uids)]
+        df_long = df_long.loc[df_long['uids'].isin(uids)]
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric(
         label="Success %",
-        value=f'{df_long.loc[df_long[completion_col].str.len() > 0].shape[0]/df_long.shape[0] * 100:.1f}',
+        value=f'{df_long.loc[df_long["completions"].str.len() > 0].shape[0]/df_long.shape[0] * 100:.1f}',
         help='Number of successful completions divided by total number of events'
     )
     col2.metric(
         label="Diversity %",
-        value=f'{df_long[completion_col].nunique()/df_long.shape[0] * 100:.1f}',
+        value=f'{df_long["completions"].nunique()/df_long.shape[0] * 100:.1f}',
         help='Number of unique completions divided by total number of events'
     )
     # uniqueness can be expressed as the average number of unique completions per uid divided by all unique completions
+    # uniqueness is the shared completions between selected uids 
 
     col3.metric(
         label="Uniqueness %",
-        value=f'{df_long.groupby(uid_col)[completion_col].nunique().mean()/df_long[completion_col].nunique() * 100:.1f}',
+        value=f'{df_long.groupby("uids")["completions"].nunique().mean()/df_long["completions"].nunique() * 100:.1f}',
         help='Average number of unique completions per uid divided by all unique completions'
     )
     col4.metric(

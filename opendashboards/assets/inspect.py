@@ -4,7 +4,7 @@ import pandas as pd
 import opendashboards.utils.utils as utils
 
 def clean_data(df):
-    return df.dropna(subset=df.filter(regex='completions|rewards').columns, how='all')
+    return df.dropna(subset=df.filter(regex='completions|rewards').columns, how='any')
 
 @st.cache_data
 def explode_data(df):
@@ -22,16 +22,6 @@ def explode_data(df):
 def completions(df_long, col):
     return df_long[col].value_counts()
 
-@st.cache_data
-def weights(df, index='_timestamp'):
-    # Create a column for each UID and show most recent rows
-    scores = df['moving_averaged_scores'].apply(pd.Series).fillna(method='ffill')
-    if index in df.columns:
-        scores.index = df[index]
-
-    # rename columns
-    scores.rename({i: f'UID-{i}' for i in range(scores.shape[1])}, axis=1, inplace=True)
-    return scores
 
 def run_event_data(df_runs, df, selected_runs):
 

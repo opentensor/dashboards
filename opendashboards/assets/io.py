@@ -25,7 +25,7 @@ def load_runs(project, filters, min_steps=10):
     for i, run in enumerate(all_runs):
         
         summary = run.summary
-        step = summary.get('_step',0)
+        step = summary.get('_step',-1) + 1
         if step < min_steps:
             msg.warning(f'Skipped run `{run.name}` because it contains {step} events (<{min_steps})')
             continue
@@ -46,11 +46,11 @@ def load_runs(project, filters, min_steps=10):
             'num_steps': step,
             'num_completions': step*sum(len(v) for k, v in run.summary.items() if k.endswith('completions') and isinstance(v, list)),
             'entity': run.entity,
-            'id': run.id,
-            'name': run.name,
+            'run_id': run.id,
+            'run_name': run.name,
             'project': run.project,
             'url': run.url,
-            'path': os.path.join(run.entity, run.project, run.id),
+            'run_path': os.path.join(run.entity, run.project, run.id),
             'start_time': pd.to_datetime(end_time-duration, unit="s"),
             'end_time': pd.to_datetime(end_time, unit="s"),
             'duration': pd.to_timedelta(duration, unit="s").round('s'),
@@ -78,7 +78,7 @@ def load_data(selected_runs, load=True, save=False):
         run = selected_runs.loc[idx]
         prog_msg = f'Loading data {i/len(selected_runs)*100:.0f}% ({successful}/{len(selected_runs)} runs, {n_events} events)'
 
-        file_path = os.path.join('data',f'history-{run.id}.csv')
+        file_path = os.path.join('data',f'history-{run.run_id}.csv')
 
         if load and os.path.exists(file_path):
             progress.progress(i/len(selected_runs),f'{prog_msg}... **reading** `{file_path}`')
@@ -89,18 +89,19 @@ def load_data(selected_runs, load=True, save=False):
                 st.exception(e)
                 continue
         else:
-            progress.progress(i/len(selected_runs),f'{prog_msg}... **downloading** `{run.path}`')
+            progress.progress(i/len(selected_runs),f'{prog_msg}... **downloading** `{run.run_path}`')
             try:
-                # Download the history from wandb
-                df = utils.download_data(run.path)
-                # Add metadata to the dataframe
-                df.assign(**run.to_dict())
+                # Download the history from wandb and add metadata
+                df = utils.download_data(run.run_path).assign(**run.to_dict())
 
+                print(f'Downloaded {df.shape[0]} events from `{run.run_path}`. Columns: {df.columns}')
+                df.info()
+                
                 if save and run.state != 'running':
                     df.to_csv(file_path, index=False)
                     # st.info(f'Saved history to {file_path}')
             except Exception as e:
-                info.warning(f'Failed to download history for `{run.path}`')
+                info.warning(f'Failed to download history for `{run.run_path}`')
                 st.exception(e)
                 continue
 

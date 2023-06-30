@@ -9,8 +9,7 @@ from opendashboards.assets import io, inspect, metric, plot
 # Hotkey churn
 
 DEFAULT_PROJECT = "openvalidators"
-DEFAULT_FILTERS = {"tags": {"$in": [f'1.0.{i}' for i in range(10)]}}
-DEFAULT_SELECTED_RUNS = ['kt9bzxii']
+DEFAULT_FILTERS = {"tags": {"$in": [f'1.1.{i}' for i in range(10)]}}
 DEFAULT_SELECTED_HOTKEYS = None
 DEFAULT_SRC = 'followup'
 DEFAULT_COMPLETION_NTOP = 10
@@ -66,13 +65,13 @@ with tab1:
     if n_runs:
         df = io.load_data(df_runs_subset, load=True, save=True)
         df = inspect.clean_data(df)
+        print(f'\nNans in columns: {df.isna().sum()}')
         df_long = inspect.explode_data(df)
-        df_weights = inspect.weights(df)
     else:
         st.info(f'You must select at least one run to load data')
         st.stop()
 
-    metric.runs(df_long, n_runs)
+    metric.runs(df_long)
 
     st.markdown('#')
     st.subheader(":violet[Event] Data")
@@ -83,7 +82,7 @@ with tab1:
         st.dataframe(df_long.head(num_rows) if use_long_checkbox else df.head(num_rows),
                      use_container_width=True)
 
-
+step_types = ['all']+['augment','followup','answer']#list(df.name.unique())
 
 ### UID Health ###
 # TODO: Live time - time elapsed since moving_averaged_score for selected UID was 0 (lower bound so use >Time)
@@ -94,20 +93,21 @@ with tab2:
     st.subheader("UID :violet[Health]")
     st.info(f"Showing UID health metrics for **{n_runs} selected runs**")
 
-    uid_src = st.radio('Select one:', ['followup', 'answer'], horizontal=True, key='uid_src')
-
-    metric.uids(df_long, uid_src)
-    uids = st.multiselect('UID:', sorted(df_long[f'{uid_src}_uids'].unique()), key='uid')
+    uid_src = st.radio('Select event type:', step_types, horizontal=True, key='uid_src')
+    df_uid = df_long[df_long.name.str.contains(uid_src)] if uid_src != 'all' else df_long
+        
+    metric.uids(df_uid, uid_src)
+    uids = st.multiselect('UID:', sorted(df_uid['uids'].unique()), key='uid')
     with st.expander(f'Show UID health data for **{n_runs} selected runs** and **{len(uids)} selected UIDs**'):
         st.markdown('#')
         st.subheader(f"UID {uid_src.title()} :violet[Health]")
         agg_uid_checkbox = st.checkbox('Aggregate UIDs', value=True)
         if agg_uid_checkbox:
-            metric.uids(df_long, uid_src, uids)
+            metric.uids(df_uid, uid_src, uids)
         else:
             for uid in uids:
                 st.caption(f'UID: {uid}')
-                metric.uids(df_long, uid_src, [uid])
+                metric.uids(df_uid, uid_src, [uid])
 
         st.subheader(f'Cumulative completion frequency')
 
@@ -117,18 +117,8 @@ with tab2:
         freq_cumulative = freq_col2.checkbox('Cumulative', value=False, key='freq_cumulative')
         freq_normalize = freq_col2.checkbox('Normalize', value=True, key='freq_normalize')
 
-        plot.uid_completion_counts(df_long, uids=uids, src=uid_src, ntop=freq_ntop, rm_empty=freq_rm_empty, cumulative=freq_cumulative, normalize=freq_normalize)
+        plot.uid_completion_counts(df_uid, uids=uids, src=uid_src, ntop=freq_ntop, rm_empty=freq_rm_empty, cumulative=freq_cumulative, normalize=freq_normalize)
 
-
-    with st.expander(f'Show UID weights data for **{n_runs} selected runs** and **{len(uids)} selected UIDs**'):
-
-        st.markdown('#')
-        st.subheader(f"UID {uid_src.title()} :violet[Weights]")
-
-        plot.weights(
-                df_weights,
-                uids=uids,
-        )
 
     with st.expander(f'Show UID **{uid_src}** leaderboard data for **{n_runs} selected runs**'):
 
@@ -139,10 +129,10 @@ with tab2:
         uid_agg = uid_col2.selectbox('Aggregation:', ('mean','min','max','size','nunique'), key='uid_agg')
 
         plot.leaderboard(
-                df,
+                df_uid,
                 ntop=uid_ntop,
-                group_on=f'{uid_src}_uids',
-                agg_col=f'{uid_src}_rewards',
+                group_on='uids',
+                agg_col='rewards',
                 agg=uid_agg
             )
 
@@ -163,24 +153,22 @@ with tab3:
     completion_info = st.empty()
 
     msg_col1, msg_col2 = st.columns(2)
-    completion_src = msg_col1.radio('Select one:', ['followup', 'answer'], horizontal=True, key='completion_src')
+    # completion_src = msg_col1.radio('Select one:', ['followup', 'answer'], horizontal=True, key='completion_src')
+    completion_src = st.radio('Select event type:', step_types, horizontal=True, key='completion_src')
+    df_comp = df_long[df_long.name==completion_src] if completion_src != 'all' else df_long
+    
     completion_info.info(f"Showing **{completion_src}** completions for **{n_runs} selected runs**")
 
     completion_ntop = msg_col2.slider('Top k:', min_value=1, max_value=50, value=DEFAULT_COMPLETION_NTOP, key='completion_ntop')
 
-    completion_col = f'{completion_src}_completions'
-    reward_col = f'{completion_src}_rewards'
-    uid_col = f'{completion_src}_uids'
-    time_col = f'{completion_src}_times'
-
-    completions = inspect.completions(df_long, completion_col)
+    completions = inspect.completions(df_long, 'completions')
 
     # Get completions with highest average rewards
     plot.leaderboard(
         df,
         ntop=completion_ntop,
-        group_on=completion_col,
-        agg_col=reward_col,
+        group_on='completions',
+        agg_col='rewards',
         agg='mean',
         alias=True
     )
@@ -195,9 +183,9 @@ with tab3:
 
         plot.completion_rewards(
             df,
-            completion_col=completion_col,
-            reward_col=reward_col,
-            uid_col=uid_col,
+            completion_col='completions',
+            reward_col='rewards',
+            uid_col='uids',
             ntop=completion_ntop,
             completions=completion_select,
         )
@@ -209,14 +197,14 @@ with tab3:
         st.markdown('#')
         st.subheader('Completion :violet[Length]')
 
-        words_checkbox = st.checkbox('Use words', value=True, key='words_checkbox')
+        completion_length_radio = st.radio('Use: ', ['characters','words','sentences'], key='completion_length_radio')
 
         plot.completion_length_time(
             df,
-            completion_col=completion_col,
-            uid_col=uid_col,
-            time_col=time_col,
-            words=words_checkbox,
+            completion_col='completions',
+            uid_col='uids',
+            time_col='completion_times',
+            length_opt=completion_length_radio,
         )
 
 ### Prompt-based scoring ###
