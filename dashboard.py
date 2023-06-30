@@ -39,18 +39,7 @@ st.markdown('#')
 with st.spinner(text=f'Checking wandb...'):
     df_runs = io.load_runs(project=DEFAULT_PROJECT, filters=DEFAULT_FILTERS, min_steps=10)
 
-
-### Wandb Runs ###
-# with st.sidebar:
-
-#     st.markdown('#')
-#     st.sidebar.header(":violet[Select] Runs")
-
-    # df_runs_subset = io.filter_dataframe(df_runs, demo_selection=df_runs.id.isin(DEFAULT_SELECTED_RUNS))
-    # n_runs = len(df_runs_subset)
-
 metric.wandb(df_runs)
-
 
 # add vertical space
 st.markdown('#')
@@ -64,9 +53,6 @@ with tab1:
     st.markdown('#')
     st.subheader(":violet[Run] Data")
     with st.expander(f'Show :violet[raw] wandb data'):
-
-        # filter_selected_checkbox = st.checkbox('Filter to selected runs', value=True)
-        # df_to_show = df_runs_subset if filter_selected_checkbox else df_runs
 
         edited_df = st.data_editor(
             df_runs.assign(Select=False).set_index('Select'),

@@ -44,7 +44,7 @@ def plot_throughput(df: pd.DataFrame, n_minutes: int = 10) -> go.Figure:
 
 
 def plot_weights(scores: pd.DataFrame, ntop: int = 20, uids: List[Union[str, int]] = None) -> go.Figure:
-    """_summary_
+    """Plot weights of uids.
 
     Args:
         scores (pd.DataFrame): Dataframe of scores. Should be indexed by timestamp and have one column per uid.
@@ -310,11 +310,15 @@ def plot_completion_length_time(
     uid_col: str = "answer_uids",
     completion_col: str = "answer_completions",
     time_col: str = "answer_times",
+    uids: List[int] = None,
     words: bool = False,
 ) -> go.Figure:
 
     df = df[[uid_col, completion_col, time_col]].explode(column=[uid_col, completion_col, time_col])
     df["time"] = df[time_col].astype(float)
+    if uids is not None:
+        df = df.loc[df[uid_col].isin(uids)]
+        
     if words:
         df["completion_length"] = df[completion_col].str.split().str.len()
     else:
@@ -324,6 +328,7 @@ def plot_completion_length_time(
         df,
         x='completion_length',
         y='time',
+        color=uid_col if uids is not None else None,
         labels={"completion_length": f"Completion Length, {'Words' if words else 'Characters'}", "time": "Time (s)"},
         title=f"Completion Length vs Time, {'Words' if words else 'Characters'}",
         marginal_x="histogram",
