@@ -155,7 +155,7 @@ with tab3:
     msg_col1, msg_col2 = st.columns(2)
     # completion_src = msg_col1.radio('Select one:', ['followup', 'answer'], horizontal=True, key='completion_src')
     completion_src = st.radio('Select event type:', step_types, horizontal=True, key='completion_src')
-    df_comp = df_long[df_long.name==completion_src] if completion_src != 'all' else df_long
+    df_comp = df_long[df_long.name.str.contains(completion_src)] if completion_src != 'all' else df_long
     
     completion_info.info(f"Showing **{completion_src}** completions for **{n_runs} selected runs**")
 
@@ -165,7 +165,7 @@ with tab3:
 
     # Get completions with highest average rewards
     plot.leaderboard(
-        df,
+        df_comp,
         ntop=completion_ntop,
         group_on='completions',
         agg_col='rewards',
@@ -182,7 +182,7 @@ with tab3:
         # completion_regex = st.text_input('Completion regex:', value='', key='completion_regex')
 
         plot.completion_rewards(
-            df,
+            df_comp,
             completion_col='completions',
             reward_col='rewards',
             uid_col='uids',
@@ -199,8 +199,9 @@ with tab3:
 
         completion_length_radio = st.radio('Use: ', ['characters','words','sentences'], key='completion_length_radio')
 
+        # Todo: use color to identify selected completions/ step names/ uids
         plot.completion_length_time(
-            df,
+            df_comp,
             completion_col='completions',
             uid_col='uids',
             time_col='completion_times',
