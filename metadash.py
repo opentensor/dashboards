@@ -5,6 +5,7 @@ from meta_utils import run_subprocess, load_metagraphs
 # from opendashboards.assets import io, inspect, metric, plot
 from meta_plotting import plot_trace, plot_cabals
 import asyncio
+from functools import lru_cache
 
 ## TODO: Read blocks from a big parquet file instead of loading all the pickles -- this is slow
 
@@ -47,24 +48,49 @@ st.title('Metagraph :red[Analysis] Dashboard :eyes:')
 st.markdown('#')
 st.markdown('#')
 
+netuid = 1
 subtensor = bittensor.subtensor(network='finney')
 current_block = subtensor.get_current_block()
-current_difficulty = subtensor.difficulty(1, block=current_block)
 
-bcol1, bcol2, bcol3 = st.columns([0.2, 0.6, 0.2])
-with bcol1:
-    st.metric('Current **block**', current_block, delta='+7200 [24hr]')
-    # st.metric('Current **difficulty**', f'{current_difficulty/10e12:.0}T', delta='?')
+@lru_cache(maxsize=1)
+def _metagraph(block):
     
+    print('rerunning cache')
+    return ( 
+            subtensor.metagraph(netuid, block=block), 
+            subtensor.metagraph(netuid, block=block - 7200),
+            subtensor.burn(netuid=netuid, block=block),
+            subtensor.burn(netuid=netuid, block=block - 7200),
+    )
     
-block_start, block_end = bcol2.select_slider(
+current_metagraph, yesterday_metagraph, current_burn, yesterday_burn = _metagraph(10*current_block//10)
+
+current_vcount = current_metagraph.validator_permit.sum().item()
+current_mcount = (~current_metagraph.validator_permit).sum().item()
+yesterday_vcount = yesterday_metagraph.validator_permit.sum().item()
+yesterday_mcount = (~yesterday_metagraph.validator_permit).sum().item()
+
+mcol1, mcol2, mcol3, mcol4 = st.columns(4)
+mcol1.metric('Block', current_block, delta='+7200 [24hr]')
+mcol2.metric('Register Cost', f'{current_burn.unit}{current_burn.tao:.3f}', delta=f'{current_burn.tao-yesterday_burn.tao:.3f}')
+mcol3.metric('Validators', current_vcount, delta=current_vcount-yesterday_vcount)
+mcol4.metric('Miners', current_mcount, delta=current_mcount-yesterday_mcount)
+
+
+st.markdown('#')    
+st.markdown('#')    
+
+bcol1, bcol2, bcol3 = st.columns([0.6, 0.1, 0.2])    
+block_start, block_end = bcol1.select_slider(
     'Select a **block range**',
     options=blockfiles,
     value=(DEFAULT_BLOCK_START, DEFAULT_BLOCK_END),
     format_func=lambda x: f'{x:,}'
 )
 
-bcol3.button('Refresh', on_click=run_subprocess)
+with bcol3:
+    st.markdown('#')    
+    st.button('Refresh', on_click=run_subprocess)
 
 
 with st.spinner(text=f'Loading data...'):

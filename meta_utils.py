@@ -39,7 +39,7 @@ def load_metagraphs(block_start, block_end, block_step=1000, datadir='data/metag
 
     blocks = range(block_start, block_end, block_step)
     print(f'Loading blocks {blocks[0]}-{blocks[-1]} from {datadir}')
-    filenames = sorted(filename for filename in os.listdir(datadir) if int(filename.split('.')[0]) in blocks)
+    filenames = sorted(filename for filename in os.listdir(datadir) if filename.split('.')[0].isdigit() and int(filename.split('.')[0]) in blocks)
     print(f'Found {len(filenames)} files in {datadir}')
     
     metagraphs = []
