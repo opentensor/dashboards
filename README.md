@@ -10,9 +10,9 @@ Repo contents:
 1. [openvalidators](#validators) dashboard
 2. [openmetagraph](#metagraph) dashboard
 
-# Design Overview and Ongoing Development
+# Design Overview
 
-Both the constantly growing bittensor [blockchain](https://polkadot.js.org/apps/#/chainstate) and the openvalidators [community wandb project](https://wandb.ai/opentensor-dev/openvalidators?workspace=default) produce many GB per day. Storing, analyzing and visualizing such a large volume of data can be challenging, and in acknowledgement of this fact we are enhancing the repo in the following way, which aligns with typical use-cases while remaining within reasonable data limits and performance expectations.
+Both the constantly growing bittensor [blockchain](https://polkadot.js.org/apps/#/chainstate) and the openvalidators [community wandb project](https://wandb.ai/opentensor-dev/openvalidators?workspace=default) produce many GB per day.  Storing, analyzing and visualizing such a large volume of data can be challenging, and in acknowledgement of this fact there are ongoing developments to the repo in the following way, which aligns with typical use-cases while remaining within reasonable data limits and performance expectations.
 
 - Recent data (24-48 hours) is stored in high resolution (raw) format. This is suitable for full introspection.
 - Historical data (30-90 days) is stored in low resolution (aggregated) format. This is suitable for high-level trend analysis.
