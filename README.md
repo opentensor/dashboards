@@ -10,14 +10,14 @@ Repo contents:
 1. [openvalidators](#validators) dashboard
 2. [openmetagraph](#metagraph) dashboard
 
-# Design Overview
+## Design Overview
 
 Both the constantly growing bittensor [blockchain](https://polkadot.js.org/apps/#/chainstate) and the openvalidators [community wandb project](https://wandb.ai/opentensor-dev/openvalidators?workspace=default) produce many GB per day.  Storing, analyzing and visualizing such a large volume of data can be challenging, and in acknowledgement of this fact there are ongoing developments to the repo in the following way, which aligns with typical use-cases while remaining within reasonable data limits and performance expectations.
 
 - Recent data (24-48 hours) is stored in high resolution (raw) format. This is suitable for full introspection.
 - Historical data (30-90 days) is stored in low resolution (aggregated) format. This is suitable for high-level trend analysis.
 
-# Getting Started
+## Getting Started
 
 To install:
 ```
@@ -35,19 +35,20 @@ Alternatively, you can [deploy the app for free on streamlit](https://blog.strea
 This repo contains a streamlit [dashboard]([url](https://opendashboard-v110.streamlit.app/)) which can be used to inspect and analyze the live network. It works by pulling validator data from [wandb](https://wandb.ai/opentensor-dev/openvalidators?workspace=default) and using this data for **metric tracking** and **interactive data visualizations**.
 
 ## Screenshots
+
 ------
-*Overview metrics and run selection*
+*Overview metrics and run selection* - Total participants and contributed knowledge are displayed as metrics at the top of the app. This shows the total dataset size and growth rate. By selecting one or more runs from the table, the app will download the respective source data from wandb or load from local storage.
 ![Screenshot 2023-07-27 at 13 29 46](https://github.com/opentensor/dashboards/assets/6709103/f54b963e-b0c7-4333-be8c-800743ecf220)
 
 
 ------
-*UID health*
+*UID health* - One or more UIDs can be inspected in terms of their succesful response rate, diversity of responses and uniqueness within the network. Leaderboards of top-performing UIDs are also included.
 ![Screenshot 2023-07-27 at 13 37 13](https://github.com/opentensor/dashboards/assets/6709103/e5b230f2-a21d-4e3e-9767-c787ec06944a)
 
 ![Screenshot 2023-07-27 at 13 37 18](https://github.com/opentensor/dashboards/assets/6709103/3b8cfe30-14a6-4493-adda-41c4f82c1025)
 
 ------
-*Completions*
+*Completions* - Individual completions can be analyzed. Leaderboards can be viewed based on rate or reward, and completion length-and-time statistics are shown. Taken together, these figures allow the reward mechanism to be better understood.
 ![Screenshot 2023-07-27 at 13 38 19](https://github.com/opentensor/dashboards/assets/6709103/fa7f8f60-425e-4963-98a7-f8bd3641c3dc)
 
 ![Screenshot 2023-07-27 at 13 39 01](https://github.com/opentensor/dashboards/assets/6709103/968253ad-b869-46c7-adef-bdefc5ccfc33)
