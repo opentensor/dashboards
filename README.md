@@ -55,7 +55,12 @@ This repo contains a streamlit [dashboard]([url](https://opendashboard-v110.stre
 
 
 # Metagraph
-This repo contains a WIP streamlit dashboard for inspecting the bittensor blockchain. It uses the `multigraph.py` script to pull metagraph snapshots from subtensor and then constructs a dataframe from these snapshots. 
+This repo contains a WIP streamlit dashboard for inspecting the bittensor blockchain. It uses the `multigraph.py` script to pull metagraph snapshots from subtensor and then constructs a dataframe from these snapshots. **If you are running this in dev mode, be sure to run the following command to build a local database**:
+
+```
+python multigraph.py
+```
+By default, it creates a database for netuid 1.
 
 ## Screenshots
 
