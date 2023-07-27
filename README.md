@@ -15,7 +15,7 @@ Repo contents:
 Both the constantly growing bittensor [blockchain](https://polkadot.js.org/apps/#/chainstate) and the openvalidators [community wandb project](https://wandb.ai/opentensor-dev/openvalidators?workspace=default) produce many GB per day. Storing, analyzing and visualizing such a large volume of data can be challenging, and in acknowledgement of this fact we are enhancing the repo in the following way, which aligns with typical use-cases while remaining within reasonable data limits and performance expectations.
 
 - Recent data (24-48 hours) is stored in high resolution (raw) format. This is suitable for full introspection.
-- Historical data (14-30 days) is stored in low resolution (aggregated) format. This is suitable for high-level trend analysis.
+- Historical data (30-90 days) is stored in low resolution (aggregated) format. This is suitable for high-level trend analysis.
 
 # Validators
 This repo contains a streamlit [dashboard]([url](https://opendashboard-v110.streamlit.app/)) which can be used to inspect and analyze the live network. It works by pulling validator data from [wandb](https://wandb.ai/opentensor-dev/openvalidators?workspace=default) and using this data for **metric tracking** and **interactive data visualizations**.
