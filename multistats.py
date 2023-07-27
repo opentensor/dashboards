@@ -3,7 +3,7 @@ import re
 import argparse
 import tqdm
 import wandb
-from traceback import format_exc
+import traceback
 import plotly.express as px
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
@@ -30,14 +30,14 @@ def pull_wandb_runs(project='openvalidators', filters=None, min_steps=50, max_st
         summary = run.summary
         if summary_filters is not None and not summary_filters(summary):
             continue
-        if netuid is not None and summary.get('netuid') != netuid:
+        if netuid is not None and run.config.get('netuid') != netuid:
             continue
         step = summary.get('_step',0)
         if step < min_steps or step > max_steps:
             # warnings.warn(f'Skipped run `{run.name}` because it contains {step} events (<{min_steps})')
             continue
 
-        prog_msg = f'Loading data {i/len(all_runs)*100:.0f}% ({successful}/{len(all_runs)} runs, {n_events} events)'
+        prog_msg = f'Loading data {successful/ntop*100:.0f}% ({successful}/{ntop} runs, {n_events} events)'
         pbar.set_description(f'{prog_msg}... **fetching** `{run.name}`')
 
         duration = summary.get('_runtime')
@@ -108,13 +108,14 @@ def load_data(run_id, run_path=None, load=True, save=False, explode=True):
         df = df.loc[df.step_length.notna()]
 
         # detect list columns which as stored as strings
-        list_cols = [c for c in df.columns if df[c].dtype == "object" and df[c].str.startswith("[").all()]
+        ignore_cols = ('moving_averaged_scores')
+        list_cols = [c for c in df.columns if c not in ignore_cols and df[c].dtype == "object" and df[c].str.startswith("[").all()]
         # convert string representation of list to list
         # df[list_cols] = df[list_cols].apply(lambda x: eval(x, {'__builtins__': None}) if pd.notna(x) else x)
         try:
-            df[list_cols] = df[list_cols].applymap(eval, na_action='ignore')
+            df[list_cols] = df[list_cols].fillna('').applymap(eval, na_action='ignore')
         except ValueError as e:
-            print(f'Error loading {file_path!r} when converting columns {list_cols} to list: {e}')
+            print(f'Error loading {file_path!r} when converting columns {list_cols} to list: {e}', flush=True)
 
     else:
         # Download the history from wandb and add metadata
@@ -152,37 +153,43 @@ def calculate_stats(df_long, freq='H', save_path=None, ntop=3 ):
         ])
         df_long = df_schema.reset_index()
 
-
-    print(f'Calculating stats for dataframe with shape {df_long.shape}')
+    run_id = df_long['run_id'].iloc[0]
+    # print(f'Calculating stats for run {run_id!r} dataframe with shape {df_long.shape}')
 
     # Approximate number of tokens in each completion
-    df_long['completion_num_tokens'] = (df_long['completions'].str.split().str.len() / 0.75).round()
-
-
-    g = df_long.groupby([pd.Grouper(key='_timestamp', axis=0, freq=freq), 'run_id'])
+    df_long['completion_num_tokens'] = (df_long['completions'].astype(str).str.split().str.len() / 0.75).round()
 
     # TODO: use named aggregations
     reward_aggs = ['sum','mean','std','median','max',aggregate.nonzero_rate, aggregate.nonzero_mean, aggregate.nonzero_std, aggregate.nonzero_median]
     aggs = {
         'completions': ['nunique','count', aggregate.diversity, aggregate.successful_diversity, aggregate.success_rate],
         'completion_num_tokens': ['mean', 'std', 'median', 'max'],
-        **{k: reward_aggs for k in df_long.filter(regex='reward')}
+        **{k: reward_aggs for k in df_long.filter(regex='reward') if df_long[k].nunique() > 1}
     }
 
     # Calculate tokens per second
     if 'completion_times' in df_long.columns:
-        df_long['tokens_per_sec'] = df_long['completion_num_tokens']/df_long['completion_times']
+        df_long['tokens_per_sec'] = df_long['completion_num_tokens']/(df_long['completion_times']+1e-6)
         aggs.update({
             'completion_times': ['mean','std','median','min','max'],
             'tokens_per_sec': ['mean','std','median','max'],
         })
 
-    stats = g.agg(aggs)
-    stats = stats.merge(g.apply(aggregate.top_stats, exclude='', ntop=ntop).reset_index(level=1,drop=True), left_index=True, right_index=True)
+    grouper = df_long.groupby(pd.Grouper(key='_timestamp', axis=0, freq=freq))
+    # carry out main aggregations
+    stats = grouper.agg(aggs)
+    # carry out multi-column aggregations using apply
+    diversity = grouper.apply(aggregate.successful_nonzero_diversity)
+    # carry out top completions aggregations using apply
+    top_completions = grouper.apply(aggregate.completion_top_stats, exclude='', ntop=ntop).unstack()
+    
+    # combine all aggregations, which have the same index
+    stats = pd.concat([stats, diversity, top_completions], axis=1)
+    
     # flatten multiindex columns
-    stats.columns = ['_'.join(c) for c in stats.columns]
-    stats = stats.reset_index()
-
+    stats.columns = ['_'.join([str(cc) for cc in c]) if isinstance(c, tuple) else str(c) for c in stats.columns]
+    stats = stats.reset_index().assign(run_id=run_id)
+    
     if save_path:
         stats.to_csv(save_path, index=False)
 
@@ -212,7 +219,8 @@ def process(run, load=True, save=False, load_stats=True, freq='H', ntop=3):
         return calculate_stats(df_long, freq=freq, save_path=stats_path, ntop=ntop)
 
     except Exception as e:
-        print(f'Error processing run {run["run_id"]}: { format_exc(e) }')
+        print(f'Error processing run {run["run_id"]!r}:\t{e.__class__.__name__}: {e}',flush=True)
+        print(traceback.format_exc())
 
 def line_chart(df, col, title=None):
     title = title or col.replace('_',' ').title()
@@ -299,11 +307,12 @@ if __name__ == '__main__':
                     result = future.result()
                     results.append(result)
                 except Exception as e:
-                    print(f'generated an exception: {format_exc(e)}')
+                    print(f'-----------------------------\nWorker generated an exception in "process" function:\n{e.__class__.__name__}: {e}\n-----------------------------\n',flush=True)
                 pbar.update(1)
 
     if not results:
         raise ValueError('No runs were successfully processed.')
+    print(f'Processed {len(results)} runs.',flush=True)
 
    # Concatenate the results into a single dataframe
     df = pd.concat(results, ignore_index=True).sort_values(['_timestamp','run_id'], ignore_index=True)
@@ -312,6 +321,8 @@ if __name__ == '__main__':
     print(f'Saved {df.shape[0]} rows to data/processed.csv')
 
     display(df)
+    print(f'Unique values in columns:')
+    display(df.nunique().sort_values())
     if not args.no_plot:
         
         plots = []
@@ -328,10 +339,10 @@ if __name__ == '__main__':
                         result = future.result()
                         plots.append(result)
                     except Exception as e:
-                        print(f'generated an exception: {format_exc(e)}')
+                        print(f'-----------------------------\nWorker generated an exception in "line_chart" function:\n{e.__class__.__name__}: {e}\n-----------------------------\n',flush=True)
+                        # traceback.print_exc()                    
                     pbar.update(1)
         
         print(f'Saved {len(plots)} plots to data/figures/')
-
 
 

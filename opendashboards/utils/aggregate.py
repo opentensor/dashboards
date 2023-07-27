@@ -1,16 +1,16 @@
 import pandas as pd
 
 def diversity(x):
-    return x.nunique()/len(x)
+    return x.nunique()/len(x) if len(x)>0 else 0
 
 def _nonempty(x):
-    return x[x.str.len()>0]
+    return x[x.astype(str).str.len()>0]
 
 def successful_diversity(x):
     return diversity(_nonempty(x))
 
 def success_rate(x):
-    return len(_nonempty(x))/len(x)
+    return len(_nonempty(x))/len(x) if len(x)>0 else 0
 
 def threshold_rate(x, threshold):
     return (x>threshold).sum()/len(x)
@@ -25,9 +25,8 @@ def completion_top_stats(x, exclude=None, ntop=1):
     if exclude is not None:
         vc.drop(exclude, inplace=True, errors='ignore')
         
-    rewards = x.loc[x['completions'].isin(vc.index[:ntop])].groupby('completions').rewards.agg(['mean','std'])
+    rewards = x.loc[x['completions'].isin(vc.index[:ntop])].groupby('completions').rewards.agg(['mean','std','max'])
     return pd.DataFrame({
-        'completions_rank':range(ntop),
         'completions_top':rewards.index.tolist(),
         'completions_freq':vc.values[:ntop],
         'completions_reward_mean':rewards['mean'].values,
