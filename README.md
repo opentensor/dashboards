@@ -57,6 +57,14 @@ This repo contains a streamlit [dashboard]([url](https://opendashboard-v110.stre
 # Metagraph
 This repo contains a WIP streamlit dashboard for inspecting the bittensor blockchain. It uses the `multigraph.py` script to pull metagraph snapshots from subtensor and then constructs a dataframe from these snapshots. 
 
+## Screenshots
+
+------
+*Overview metrics and block range selection* - Current block, register cost and network size.
+![Screenshot 2023-07-27 at 16 52 38](https://github.com/opentensor/dashboards/assets/6709103/943ccf97-1d9d-4f13-bc86-eaa1eafbdef4)
+
+
+
 **Feature list**:
 - Stake, incentive, dividends by block/time 💰
 - Weights and consensus 💪
