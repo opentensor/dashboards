@@ -44,7 +44,7 @@ def plot_throughput(df: pd.DataFrame, n_minutes: int = 10) -> go.Figure:
 
 
 def plot_weights(scores: pd.DataFrame, ntop: int = 20, uids: List[Union[str, int]] = None) -> go.Figure:
-    """_summary_
+    """Plot weights of uids.
 
     Args:
         scores (pd.DataFrame): Dataframe of scores. Should be indexed by timestamp and have one column per uid.
@@ -62,16 +62,16 @@ def plot_weights(scores: pd.DataFrame, ntop: int = 20, uids: List[Union[str, int
     ).update_traces(opacity=0.7)
 
 
-def plot_uid_diversty(df: pd.DataFrame, remove_unsuccessful: bool = False) -> go.Figure:
+def plot_uid_diversty(df: pd.DataFrame, x: str = 'followup', y: str = 'answer', remove_unsuccessful: bool = False) -> go.Figure:
     """Plot uid diversity as measured by ratio of unique to total completions.
 
     Args:
         df (pd.DataFrame): Dataframe of event log.
     """
-    uid_cols = ["followup_uids", "answer_uids"]
-    completion_cols = ["followup_completions", "answer_completions"]
-    reward_cols = ["followup_rewards", "answer_rewards"]
-    list_cols = uid_cols + completion_cols + reward_cols
+    return px.scatter(x=[1,2,3],y=[1,2,3])
+    xrows = df.loc[df.name.str.contains(x)]
+    yrows = df.loc[df.name.str.contains(y)]
+    df = pd.merge(xrows, yrows, on='uid', suffixes=('_followup', '_answer'))
 
     df = df[list_cols].explode(column=list_cols)
     if remove_unsuccessful:
@@ -88,7 +88,7 @@ def plot_uid_diversty(df: pd.DataFrame, remove_unsuccessful: bool = False) -> go
         frames.append(frame)
 
     merged = pd.merge(*frames, left_index=True, right_index=True, suffixes=("_followup", "_answer"))
-    merged["reward_mean"] = merged.filter(regex="rewards_mean").mean(axis=1)
+    merged["reward_mean"] = merged.filter(regex="rewards_mean").mean(axis=1).astype(float)
 
     merged.index.name = "UID"
     merged.reset_index(inplace=True)
@@ -97,8 +97,8 @@ def plot_uid_diversty(df: pd.DataFrame, remove_unsuccessful: bool = False) -> go
         merged,
         x="diversity_followup",
         y="diversity_answer",
-        opacity=0.3,
-        size="followup_completions_size",
+        opacity=0.35,
+        # size="completions_size",
         color="reward_mean",
         hover_data=["UID"] + merged.columns.tolist(),
         marginal_x="histogram",
@@ -112,7 +112,7 @@ def plot_uid_diversty(df: pd.DataFrame, remove_unsuccessful: bool = False) -> go
 
 def plot_completion_rates(
     df: pd.DataFrame,
-    msg_col: str = "all_completions",
+    msg_col: str = "completions",
     time_interval: str = "H",
     time_col: str = "_timestamp",
     ntop: int = 20,
@@ -123,7 +123,7 @@ def plot_completion_rates(
 
     Args:
         df (pd.DataFrame): Dataframe of event log.
-        msg_col (str, optional): List-like column containing completions. Defaults to 'all_completions'.
+        msg_col (str, optional): List-like column containing completions. Defaults to 'completions'.
         time_interval (str, optional): Pandas time interval. Defaults to 'H'. See https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
         time_col (str, optional): Column containing timestamps as pd.Datetime. Defaults to '_timestamp'.
         ntop (int, optional): Number of completions to plot. Defaults to 20.
@@ -163,10 +163,10 @@ def plot_completion_rates(
 
 def plot_completion_rewards(
     df: pd.DataFrame,
-    msg_col: str = "followup_completions",
-    reward_col: str = "followup_rewards",
+    msg_col: str = "completions",
+    reward_col: str = "rewards",
     time_col: str = "_timestamp",
-    uid_col: str = "followup_uids",
+    uid_col: str = "uids",
     ntop: int = 3,
     completions: List[str] = None,
     completion_regex: str = None,
@@ -175,9 +175,10 @@ def plot_completion_rewards(
 
     Args:
         df (pd.DataFrame): Dataframe of event log.
-        msg_col (str, optional): List-like column containing completions. Defaults to 'followup_completions'.
-        reward_col (str, optional): List-like column containing rewards. Defaults to 'followup_rewards'.
+        msg_col (str, optional): List-like column containing completions. Defaults to 'completions'.
+        reward_col (str, optional): List-like column containing rewards. Defaults to 'rewards'.
         time_col (str, optional): Column containing timestamps as pd.Datetime. Defaults to '_timestamp'.
+        uid_col (str, optional): Column containing UIDs. Defaults to 'uids'.
         ntop (int, optional): Number of completions to plot. Defaults to 20.
         completions (List[str], optional): List of completions to plot. Defaults to None.
         completion_regex (str, optional): Regex to match completions. Defaults to None.
@@ -198,7 +199,11 @@ def plot_completion_rewards(
         else:
             completions = completion_counts.index[:ntop]
             print(f"Using top {len(completions)} completions: \n{completions}")
-
+    else:
+        found_completions = [c for c in completions if c in completion_counts.index]
+        print(f"Using {len(found_completions)}/{len(completions)} completions: \n{found_completions}")
+        completions = found_completions
+        
     # Get ranks of completions in terms of number of occurrences
     ranks = completion_counts.rank(method="dense", ascending=False).loc[completions].astype(int)
 
@@ -219,14 +224,14 @@ def plot_completion_rewards(
         labels={"rank": "Rank", reward_col: "Reward", time_col: ""},
         title=f"Rewards for {len(completions)} Messages",
         **plotly_config,
-        opacity=0.3,
+        opacity=0.35,
     )
 
 
 def plot_leaderboard(
     df: pd.DataFrame,
-    group_on: str = "answer_uids",
-    agg_col: str = "answer_rewards",
+    group_on: str = "uids",
+    agg_col: str = "rewards",
     agg: str = "mean",
     ntop: int = 10,
     alias: bool = False,
@@ -235,44 +240,44 @@ def plot_leaderboard(
 
     Args:
         df (pd.DataFrame): Dataframe of event log.
-        group_on (str, optional): Entities to use for grouping. Defaults to 'answer_uids'.
-        agg_col (str, optional): Column to aggregate. Defaults to 'answer_rewards'.
+        group_on (str, optional): Entities to use for grouping. Defaults to 'uids'.
+        agg_col (str, optional): Column to aggregate. Defaults to 'rewards'.
         agg (str, optional): Aggregation function. Defaults to 'mean'.
         ntop (int, optional): Number of entities to plot. Defaults to 10.
         alias (bool, optional): Whether to use aliases for indices. Defaults to False.
     """
     df = df[[group_on, agg_col]].explode(column=[group_on, agg_col])
 
-    rankings = df.groupby(group_on)[agg_col].agg(agg).sort_values(ascending=False).head(ntop)
+    rankings = df.groupby(group_on)[agg_col].agg(agg).sort_values(ascending=False).head(ntop).astype(float)
     if alias:
         index = rankings.index.map({name: str(i) for i, name in enumerate(rankings.index)})
     else:
         index = rankings.index.astype(str)
 
-    print(f"Using top {ntop} {group_on} by {agg_col}: \n{rankings}")
     return px.bar(
-        x=rankings.astype(float),
+        x=rankings,
         y=index,
         color=rankings,
         orientation="h",
         labels={"x": f"{agg_col.title()}", "y": group_on, "color": ""},
         title=f"Leaderboard for {agg_col}, top {ntop} {group_on}",
         color_continuous_scale="BlueRed",
-        opacity=0.5,
+        opacity=0.35,
         hover_data=[rankings.index.astype(str)],
         **plotly_config,
     )
 
 
+
 def plot_dendrite_rates(
-    df: pd.DataFrame, uid_col: str = "answer_uids", reward_col: str = "answer_rewards", ntop: int = 20, uids: List[int] = None
+    df: pd.DataFrame, uid_col: str = "uids", reward_col: str = "rewards", ntop: int = 20, uids: List[int] = None
 ) -> go.Figure:
     """Makes a bar chart of the success rate of dendrite calls for a given set of uids.
 
     Args:
         df (pd.DataFrame): Dataframe of event log.
-        uid_col (str, optional): Column containing uids. Defaults to 'answer_uids'.
-        reward_col (str, optional): Column containing rewards. Defaults to 'answer_rewards'.
+        uid_col (str, optional): Column containing uids. Defaults to 'uids'.
+        reward_col (str, optional): Column containing rewards. Defaults to 'rewards'.
         ntop (int, optional): Number of uids to plot. Defaults to 20.
         uids (List[int], optional): List of uids to plot. Defaults to None.
 
@@ -297,15 +302,91 @@ def plot_dendrite_rates(
         barmode="group",
         title="Dendrite Calls by UID",
         color_continuous_scale="Blues",
-        opacity=0.5,
+        opacity=0.35,
         **plotly_config,
     )
+
+def plot_completion_length_time(
+    df: pd.DataFrame,
+    uid_col: str = "uids",
+    completion_col: str = "completions",
+    time_col: str = "completion_times",
+    uids: List[int] = None,
+    length_opt: str = 'characters',
+) -> go.Figure:
+
+
+    df = df[[uid_col, completion_col, time_col]].explode(column=[uid_col, completion_col, time_col])
+    df["time"] = df[time_col].astype(float)
+    if uids is not None:
+        df = df.loc[df[uid_col].isin(uids)]
+        
+        
+    if length_opt == 'characters':
+        df["completion_length"] = df[completion_col].str.len()
+    elif length_opt == 'words':
+        df["completion_length"] = df[completion_col].str.split().str.len()
+    elif length_opt == 'sentences':
+        df["completion_length"] = df[completion_col].str.split('.').str.len()
+    else:
+        raise ValueError(f"length_opt must be one of 'words', 'characters', or 'sentences', got {length_opt}")
+
+    return px.scatter(
+        df,
+        x='completion_length',
+        y='time',
+        color=uid_col if uids is not None else None,
+        labels={"completion_length": f"Completion Length, {length_opt.title()}", "time": "Time (s)"},
+        title=f"Completion Length vs Time, {length_opt.title()}",
+        marginal_x="histogram",
+        marginal_y="histogram",
+        hover_data=[uid_col, completion_col],
+        opacity=0.35,
+        **plotly_config,
+    )
+
+def plot_uid_completion_counts(
+    df: pd.DataFrame,
+    uids: List[int],
+    src: str = 'answer',
+    rm_empty: bool = True,
+    ntop: int = 100,
+    cumulative: bool = False,
+    normalize: bool = True,
+) -> go.Figure:
+
+    completion_col = f'completions'
+    uid_col = f'uids'
+    if rm_empty:
+        df = df.loc[df[completion_col].str.len()>0]
+
+    df = df.loc[df[uid_col].isin(uids)]
+
+    g = df.groupby(uid_col)[completion_col].value_counts(normalize=normalize).reset_index(level=1)
+    y_col = g.columns[-1]
+
+    # rescale each group to have a max of 1 if normalize is True
+    if cumulative:
+        g[y_col] = g.groupby(level=0)[y_col].cumsum().transform(lambda x: x/x.max() if normalize else x)
+
+    # get top n completions
+    g = g.groupby(level=0).head(ntop)
+
+    # # create a rank column which increments by one and resets when the uid changes
+    g['rank'] = g.groupby(level=0).cumcount()+1
+
+    return px.line(g.sort_index().reset_index(),
+            x='rank',y=y_col,color=uid_col,
+            labels={'rank':'Top Completions',uid_col:'UID',y_col:y_col.replace('_',' ').title()},
+            title=f'{src.title()} Completion {y_col.replace("_"," ").title()}s by Rank',
+            **plotly_config,
+            ).update_traces(opacity=0.7)
 
 
 def plot_network_embedding(
     df: pd.DataFrame,
-    uid_col: str = "followup_uids",
-    completion_col: str = "followup_completions",
+    uid_col: str = "uids",
+    completion_col: str = "completions",
     ntop: int = 1,
     uids: List[int] = None,
 ) -> go.Figure:
@@ -314,8 +395,8 @@ def plot_network_embedding(
     Args:
         df (pd.DataFrame): Dataframe of event log.
 
-        uid_col (str, optional): Column containing uids. Defaults to 'answer_uids'.
-        completion_col (str, optional): Column containing completions. Defaults to 'followup_completions'.
+        uid_col (str, optional): Column containing uids. Defaults to 'uids'.
+        completion_col (str, optional): Column containing completions. Defaults to 'completions'.
         ntop (int, optional): Number of uids to plot. Defaults to 20.
         hover_data (List[str], optional): Columns to include in hover data. Defaults to None.
         uids (List[int], optional): List of uids to plot. Defaults to None.
@@ -358,6 +439,6 @@ def plot_network_embedding(
         title=f"Graph for Top {ntop} Completion Similarities",
         color_continuous_scale="BlueRed",
         hover_data=["UID", "top_completions"],
-        opacity=0.5,
+        opacity=0.35,
         **plotly_config,
     )
