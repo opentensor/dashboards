@@ -60,6 +60,12 @@ python multigraph.py
 ```
 By default, it creates a database for netuid 1.
 
+
+To run the metagraph dashboard:
+```
+streamlit run metadash.py
+```
+
 ## Screenshots
 
 ------
@@ -105,3 +111,33 @@ By default, it creates a database for netuid 1.
 - Connectivity embedding of metagraph snapshots ➡️
 - All of the above for user-selected UIDs/hotkeys 🧔
 - Full block introspection 🗄️
+
+
+## Known Bug
+
+There are compatibilty issues with protobuf, which cause errors sucha as
+```
+2023-07-28 23:20:04.943 Uncaught app exception
+Traceback (most recent call last):
+  File "/home/steffen/dashboards/env/lib/python3.8/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 552, in _run_script
+    exec(code, module.__dict__)
+  File "/home/steffen/dashboards/metadash.py", line 24, in <module>
+    import bittensor
+  File "/home/steffen/bittensor/bittensor/__init__.py", line 170, in <module>
+    import bittensor._proto.bittensor_pb2 as proto
+  File "/home/steffen/bittensor/bittensor/_proto/bittensor_pb2.py", line 32, in <module>
+    _descriptor.EnumValueDescriptor(
+  File "/home/steffen/dashboards/env/lib/python3.8/site-packages/google/protobuf/descriptor.py", line 796, in __new__
+    _message.Message._CheckCalledFromGeneratedFile()
+TypeError: Descriptors cannot not be created directly.
+If this call came from a _pb2.py file, your generated code is out of date and must be regenerated with protoc >= 3.19.0.
+If you cannot immediately regenerate your protos, some other possible workarounds are:
+ 1. Downgrade the protobuf package to 3.20.x or lower.
+ 2. Set PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python (but this will use pure-Python parsing and will be much slower).
+
+More information: https://developers.google.com/protocol-buffers/docs/news/2022-05-06#python-updates
+```
+If this happens, you can export the recommended variable and rerun
+```
+PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python streamlit run metadash.py
+```
