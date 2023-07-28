@@ -1,3 +1,4 @@
+
 <div align="left">
 
 # **Dashboards** <!-- omit in toc -->
@@ -36,18 +37,15 @@ This repo contains a streamlit [dashboard]([url](https://opendashboard-v110.stre
 
 ## Screenshots
 
-------
 *Overview metrics and run selection* - Total participants and contributed knowledge are displayed as metrics at the top of the app. This shows the total dataset size and growth rate. By selecting one or more runs from the table, the app will download the respective source data from wandb or load from local storage.
 ![Screenshot 2023-07-27 at 13 29 46](https://github.com/opentensor/dashboards/assets/6709103/f54b963e-b0c7-4333-be8c-800743ecf220)
 
 
-------
 *UID health* - One or more UIDs can be inspected in terms of their succesful response rate, diversity of responses and uniqueness within the network. Leaderboards of top-performing UIDs are also included.
 ![Screenshot 2023-07-27 at 13 37 13](https://github.com/opentensor/dashboards/assets/6709103/e5b230f2-a21d-4e3e-9767-c787ec06944a)
 
 ![Screenshot 2023-07-27 at 13 37 18](https://github.com/opentensor/dashboards/assets/6709103/3b8cfe30-14a6-4493-adda-41c4f82c1025)
 
-------
 *Completions* - Individual completions can be analyzed. Leaderboards can be viewed based on rate or reward, and completion length-and-time statistics are shown. Taken together, these figures allow the reward mechanism to be better understood.
 ![Screenshot 2023-07-27 at 13 38 19](https://github.com/opentensor/dashboards/assets/6709103/fa7f8f60-425e-4963-98a7-f8bd3641c3dc)
 
@@ -65,8 +63,36 @@ By default, it creates a database for netuid 1.
 ## Screenshots
 
 ------
-*Overview metrics and block range selection* - Current block, register cost and network size.
-![Screenshot 2023-07-27 at 16 52 38](https://github.com/opentensor/dashboards/assets/6709103/943ccf97-1d9d-4f13-bc86-eaa1eafbdef4)
+*Overview metrics and block range selection* - Current block, register cost and network size. A warning is displayed when the dashboard is out of date. By default this is when the source data has staleness of more than 100 blocks.
+![Screenshot 2023-07-28 at 16 55 32](https://github.com/opentensor/dashboards/assets/6709103/9844a123-4021-4551-b85f-2690431b9c6c)
+
+
+*Update metagraph data II* - When the button is clicked, a background script is run which pulls recent data. 
+![Screenshot 2023-07-28 at 17 02 31](https://github.com/opentensor/dashboards/assets/6709103/6184b215-9d33-4e1e-8f49-4d868ce2e3df)
+
+
+*Overview of network* - Hotkey churn and network occupancy of validator and miner slots are shown.
+![Screenshot 2023-07-28 at 16 55 42](https://github.com/opentensor/dashboards/assets/6709103/2b8e0e20-936f-4065-979e-c60fc3a8f75a)
+![Screenshot 2023-07-28 at 16 55 51](https://github.com/opentensor/dashboards/assets/6709103/62873107-9fb9-4433-9f2d-29b59c5c8a75)
+
+*Miner activity animations* - Highly customizable animations can be made which show the evolution of metrics such as emission and incentive for miners, grouped by coldkey.
+
+![Screenshot 2023-07-28 at 16 57 46](https://github.com/opentensor/dashboards/assets/6709103/590af29c-3aaf-4cf6-976b-20f959568935)
+![Screenshot 2023-07-28 at 16 58 00](https://github.com/opentensor/dashboards/assets/6709103/6bf98869-8ab8-42c7-a12a-26408c88889e)
+
+*Miner groups* - Miners are grouped by cold key and the number of hotkeys or IPs in possession of the group can be traced over time.
+
+![Screenshot 2023-07-28 at 17 00 05](https://github.com/opentensor/dashboards/assets/6709103/4f685532-08d2-4122-bd07-36e81c772f87)
+
+*Miner rewards* - Trace data is shown to track group performace over time. Miners belonging to the same hotkey are automatically grouped by color.
+
+![Screenshot 2023-07-28 at 17 01 40](https://github.com/opentensor/dashboards/assets/6709103/4e18635d-3469-4dce-8cd0-7ecdbf3b4398)
+
+![Screenshot 2023-07-28 at 16 59 23](https://github.com/opentensor/dashboards/assets/6709103/80d5c1a1-4fca-4280-ad10-3a82f5b4b54b)
+
+*Validator activity animations* - Highly customizable animations can be made which show the evolution of metrics such as emission and incentive for miners, grouped by coldkey.
+
+![Screenshot 2023-07-28 at 17 00 45](https://github.com/opentensor/dashboards/assets/6709103/5f0e5742-d003-4caf-97f7-84c02c975518)
 
 
 
