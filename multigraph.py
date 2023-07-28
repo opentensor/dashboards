@@ -9,7 +9,7 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
 import torch
 import bittensor
-
+from meta_utils import load_metagraphs
 #TODO: make line charts and other cool stuff for each metagraph snapshot
 
 def process(block, netuid=1, lite=True, difficulty=False, prune_weights=False, return_graph=False, half=True, subtensor=None):
@@ -43,8 +43,9 @@ def parse_arguments():
     parser.add_argument('--difficulty', action='store_true', help='Include difficulty in metagraph.')
     parser.add_argument('--prune_weights', action='store_true', help='Prune weights in metagraph.')
     parser.add_argument('--return_graph', action='store_true', help='Return metagraph instead of True.')
+    parser.add_argument('--no_dataframe', action='store_true', help='Do not create dataframe.')
     parser.add_argument('--max_workers', type=int, default=32, help='Max workers to use.')
-    parser.add_argument('--start_block', type=int, default=1_000_000, help='Start block.')
+    parser.add_argument('--start_block', type=int, default=1_500_000, help='Start block.')
     parser.add_argument('--end_block', type=int, default=600_000, help='End block.')
     parser.add_argument('--step_size', type=int, default=100, help='Step size.')
     return parser.parse_args()
@@ -72,41 +73,61 @@ if __name__ == '__main__':
     
     max_workers = min(args.max_workers, len(blocks))
 
-    os.makedirs(f'data/metagraph/{netuid}', exist_ok=True)
+    datadir = f'data/metagraph/{netuid}'
+    os.makedirs(datadir, exist_ok=True)
     if not overwrite:
         blocks = [block for block in blocks if not os.path.exists(f'data/metagraph/{netuid}/{block}.pkl')]
 
     metagraphs = []
     
-    if len(blocks)==0:
-        print(f'No blocks to process. Current block: {subtensor.block}')
-        quit()
+    if len(blocks)>0:
         
-    print(f'Processing {len(blocks)} blocks from {blocks[0]}-{blocks[-1]} using {max_workers} workers.')
-    
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = [
-            executor.submit(process, block, lite=lite(block), netuid=netuid, difficulty=difficulty) 
-            for block in blocks
-            ]
+        print(f'Processing {len(blocks)} blocks from {blocks[0]}-{blocks[-1]} using {max_workers} workers.')
+        
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            futures = [
+                executor.submit(process, block, lite=lite(block), netuid=netuid, difficulty=difficulty) 
+                for block in blocks
+                ]
 
-        success = 0        
-        with tqdm.tqdm(total=len(futures)) as pbar:
-            for block, future in zip(blocks,futures):
-                try:
-                    metagraphs.append(future.result())
-                    success += 1
-                except Exception as e:
-                    print(f'generated an exception: {print_exc(e)}')
-                pbar.update(1)
-                pbar.set_description(f'Processed {success} blocks. Current block: {block}')
+            success = 0        
+            with tqdm.tqdm(total=len(futures)) as pbar:
+                for block, future in zip(blocks,futures):
+                    try:
+                        metagraphs.append(future.result())
+                        success += 1
+                    except Exception as e:
+                        print(f'generated an exception: {print_exc(e)}')
+                    pbar.update(1)
+                    pbar.set_description(f'Processed {success} blocks. Current block: {block}')
 
-    if not success:
-        raise ValueError('No blocks were successfully processed.')
-    
-    print(f'Processed {success} blocks.')
-    if return_graph:
-        for metagraph in metagraphs:
-            print(f'{metagraph.block}: {metagraph.n.item()} nodes, difficulty={getattr(metagraph, "difficulty", None)}, weights={metagraph.weights.shape if hasattr(metagraph, "weights") else None}')
+        if not success:
+            raise ValueError('No blocks were successfully processed.')
+        
+        print(f'Processed {success} blocks.')
+        if return_graph:
+            for metagraph in metagraphs:
+                print(f'{metagraph.block}: {metagraph.n.item()} nodes, difficulty={getattr(metagraph, "difficulty", None)}, weights={metagraph.weights.shape if hasattr(metagraph, "weights") else None}')
 
-    print(metagraphs[-1])
+        print(metagraphs[-1])
+    else:
+        print(f'No blocks to process. Current block: {subtensor.block}')
+
+
+    if not args.no_dataframe:
+        save_path = f'data/metagraph/{netuid}/df.parquet'
+        blocks = range(start_block, end_block, step_size)
+        df_loaded = None
+        if os.path.exists(save_path):
+            df_loaded = pd.read_parquet(save_path)
+            blocks = [block for block in blocks if block not in df_loaded.block.unique()]
+            print(f'Loaded dataframe from {save_path!r}. {len(df_loaded)} rows. {len(blocks)} blocks to process.')
+            if len(blocks)==0:
+                print('No blocks to process.')
+                sys.exit(0)
+            
+        df = load_metagraphs(blocks[0], blocks[-1], block_step=step_size, datadir=datadir)
+        if df_loaded is not None:
+            df = pd.concat([df, df_loaded], ignore_index=True)
+        df.to_parquet(save_path)
+        print(f'Saved dataframe to {save_path!r}')
