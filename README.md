@@ -31,6 +31,8 @@ streamlit run dashboard.py
 ```
 Alternatively, you can [deploy the app for free on streamlit](https://blog.streamlit.io/host-your-streamlit-app-for-free/), but be warned that the app is limited to 1GB of RAM.
 
+### Secrets
+This component needs an environtment variable called `WANDB_API_KEY` with a working api key to communicate with [wandb](https://docs.wandb.ai/).
 
 # Validators
 This repo contains a streamlit [dashboard]([url](https://opendashboard-v110.streamlit.app/)) which can be used to inspect and analyze the live network. It works by pulling validator data from [wandb](https://wandb.ai/opentensor-dev/openvalidators?workspace=default) and using this data for **metric tracking** and **interactive data visualizations**.
