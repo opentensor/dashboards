@@ -100,6 +100,10 @@ streamlit run metadash.py
 
 ![Screenshot 2023-07-28 at 17 00 45](https://github.com/opentensor/dashboards/assets/6709103/5f0e5742-d003-4caf-97f7-84c02c975518)
 
+*Block introspection* - Full metagraph state at selected block.
+
+<img width="1721" alt="Screenshot 2023-08-02 at 11 12 43" src="https://github.com/opentensor/dashboards/assets/6709103/67942753-b44a-4c85-96e3-6efc11d3f008">
+
 
 
 **Feature list**:
