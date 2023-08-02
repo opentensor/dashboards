@@ -141,3 +141,22 @@ If this happens, you can export the recommended variable and rerun
 ```
 PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python streamlit run metadash.py
 ```
+
+### Possible fix
+
+Since the original source of this bugfix is the conflicts between the requirements:
+```
+ERROR: Cannot install -r /mount/src/dashboards/requirements.txt (line 1), -r /mount/src/dashboards/requirements.txt (line 10) and -r /mount/src/dashboards/requirements.txt (line 3) because these package versions have conflicting dependencies.
+
+The conflict is caused by:
+    streamlit 1.23.1 depends on protobuf<5 and >=3.20
+    wandb 0.15.3 depends on protobuf!=4.21.0, <5 and >=3.15.0; python_version == "3.9" and sys_platform == "linux"
+    bittensor 5.3.3 depends on protobuf==3.19.5
+To fix this you could try to:
+1. loosen the range of package versions you've specified
+2. remove package versions to allow pip attempt to solve the dependency conflict
+
+ERROR: ResolutionImpossible: for help visit https://pip.pypa.io/en/latest/topics/dependency-resolution/#dealing-with-dependency-conflicts
+```
+
+We can fix this by aligning the requirements so that everyone has a common range of protobuf package versions to work with...
