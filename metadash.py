@@ -245,3 +245,15 @@ with tab3:
             plotting.plot_cabals(validators, time_col=x, count_col=count_col, sel_col=color, ntop=ntop, smooth=smooth, smooth_agg=smooth_agg, opacity=opacity), 
             use_container_width=True
         )
+        
+with tab4:
+    
+    st.markdown('#')
+    st.markdown('#')
+    st.subheader('Block Introspection')
+    st.info('**Block introspection** *shows the complete metagraph of a block*')    
+    
+    selected_block = st.selectbox('**Block**', reversed(df_sel.block.unique()), index=0)
+
+    st.dataframe(df_sel.loc[df_sel['block']==selected_block])
+    
