@@ -16,6 +16,17 @@ from IPython.display import display
 api= wandb.Api(timeout=60)
 wandb.login(anonymous="allow")
 
+import json
+# Store the original json.loads
+original_json_loads = json.loads
+
+def relaxed_json_loads(s, *args, **kwargs):
+    kwargs.pop("strict", None)  # remove the strict argument if it exists
+    return original_json_loads(s, strict=False, *args, **kwargs)
+
+# Patch the library's json.loads
+json.loads = relaxed_json_loads
+
 def pull_wandb_runs(project='openvalidators', filters=None, min_steps=50, max_steps=100_000, ntop=10, netuid=None, summary_filters=None ):
     # TODO: speed this up by storing older runs
 
@@ -265,6 +276,7 @@ if __name__ == '__main__':
 
     filters = None# {"tags": {"$in": [f'1.1.{i}' for i in range(10)]}}
     # filters={'tags': {'$in': ['5F4tQyWrhfGVcNhoqeiNsR6KjD4wMZ2kfhLj4oHYuyHbZAc3']}} # Is foundation validator
+    
     if args.load_runs and os.path.exists('data/wandb.csv'):
         df_runs = pd.read_csv('data/wandb.csv')
         assert len(df_runs) >= args.ntop, f'Loaded {len(df_runs)} runs, but expected at least {args.ntop}'
