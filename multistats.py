@@ -275,7 +275,6 @@ if __name__ == '__main__':
     print(args)
 
     filters = None# {"tags": {"$in": [f'1.1.{i}' for i in range(10)]}}
-    # filters={'tags': {'$in': ['5F4tQyWrhfGVcNhoqeiNsR6KjD4wMZ2kfhLj4oHYuyHbZAc3']}} # Is foundation validator
     
     if args.load_runs and os.path.exists('data/wandb.csv'):
         df_runs = pd.read_csv('data/wandb.csv')
