@@ -123,7 +123,7 @@ if __name__ == '__main__':
             blocks = [block for block in blocks if block not in df_loaded.block.unique()]
             print(f'Loaded dataframe from {save_path!r}. {len(df_loaded)} rows. {len(blocks)} blocks to process.')
         
-        if len(blocks)==0:
+        if len(blocks) == 0:
             print('No blocks to process.')
             sys.exit(0)
         
