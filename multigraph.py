@@ -116,16 +116,18 @@ if __name__ == '__main__':
 
     if not args.no_dataframe:
         save_path = f'data/metagraph/{netuid}/df.parquet'
-        blocks = range(start_block, end_block, step_size)
+        blocks = sorted(range(start_block, end_block, -step_size))
         df_loaded = None
         if os.path.exists(save_path):
             df_loaded = pd.read_parquet(save_path)
             blocks = [block for block in blocks if block not in df_loaded.block.unique()]
             print(f'Loaded dataframe from {save_path!r}. {len(df_loaded)} rows. {len(blocks)} blocks to process.')
-            if len(blocks)==0:
-                print('No blocks to process.')
-                sys.exit(0)
-            
+        
+        if len(blocks) == 0:
+            print('No blocks to process.')
+            sys.exit(0)
+        
+        print(f'Loading metagraphs from {blocks[0]}-{blocks[-1]} ({len(blocks)}) to create dataframe.')
         df = load_metagraphs(blocks[0], blocks[-1], block_step=step_size, datadir=datadir)
         if df_loaded is not None:
             df = pd.concat([df, df_loaded], ignore_index=True)
