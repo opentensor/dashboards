@@ -14,16 +14,32 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 from tqdm.notebook import tqdm
 
 
+def check_uid_availability(metagraph: "bt.metagraph.Metagraph", uid: int):
+    """Check if a uid is available in the metagraph"""
+    uid_is_serving = metagraph.axons[uid].is_serving
+    uid_has_validator_permit = metagraph.validator_permit[uid]
+
+    is_uid_available = uid_is_serving and not uid_has_validator_permit
+    return is_uid_available
+
+
 def sample_n_from_top_100_incentive(n_sample:int, netuid: int = 1) -> List[int]:
     """Sample n uids from the top 100 uids with the highest incentive"""
     # Creates dataframe with uids, incentives and their ranks
     metagraph = bt.metagraph(netuid)
+
+    # Filters uids that are available defined by the rules in `check_uid_availability`
+    available_uids = [uid.item() for uid in metagraph.uids if check_uid_availability(metagraph, uid.item())]
+    available_uids_emissions = [metagraph.emission[uid].item() for uid in available_uids]
+    bt.logging.info(f'Available uids: {len(available_uids)} / {len(metagraph.uids)}')
+        
+    # Create dataframe with uids, emissions and their ranks
     df = pd.DataFrame({
-        'uid': list(map(lambda uid: uid.item(), metagraph.uids)),
-        'incentive': list(map(lambda incentive: incentive.item(), metagraph.incentive)),
+        'uid': available_uids,
+        'emission': available_uids_emissions,
     })
-    df = df.sort_values(by='incentive', ascending=False)
-    df['rank'] = df['incentive'].rank(method='min', ascending=False).astype(int)
+    df = df.sort_values(by='emission', ascending=False)
+    df['rank'] = df['emission'].rank(method='min', ascending=False).astype(int)
 
     # Sample n uids from the top 100 uids with the highest incentive
     top_100 = df.sort_values(by='rank').head(100)
