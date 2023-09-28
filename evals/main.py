@@ -29,6 +29,7 @@ def perform_arc_evaluation(n_few_shots:int = N_FEW_SHOTS):
 def perform_truthful_qa_dataset():
     output_path = 'hf://datasets/opentensor/research-and-development/experiments/truthfulqa-evaluation'
     tqa_eval = TruthfulQADatasetEval()
+    # Sample baseline model
     df = tqa_eval.create_baseline_dataset(
         model=gpt_3_5_turbo,
         n_few_shots=0,

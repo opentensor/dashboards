@@ -136,7 +136,7 @@ Correct answer:
             return
         
         # Adds prompt_id column
-        dataset['prompt_id'] = 'tqa_prompt_' + dataset.index.astype(str)
+        dataset['mc1_prompt_id'] = 'tqa_prompt_' + dataset.index.astype(str)
         # Get baseline answers
         dataset['mc1_baseline_answer'] = get_completions(
             dataframe=dataset, 
