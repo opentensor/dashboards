@@ -1,7 +1,7 @@
 import time
 import pandas as pd
 import bittensor as bt
-from .base import DatasetEval
+from .base import DatasetEval, prompt_confirmation_cost
 from datasets import load_dataset
 from openai_utils import get_completions, OpenAIModel, calculate_openai_cost
 
@@ -65,14 +65,9 @@ Correct answer:
             
         # Ask for confirmation before proceeding
         estimated_price = round(dataset['estimated_total_price'].sum(), 2)
-        time.sleep(1) # Wait for logging to finish
-        confirmation = input(f"Estimated cost: {estimated_price}\nDo you want to proceed? (yes/no): ")
-        if confirmation.lower() == 'yes' or confirmation.lower() == 'y':
-            print("Proceeding...")
-        else:
-            print("Operation cancelled.")
+        # Return if user doesn't confirm
+        if not prompt_confirmation_cost(estimated_price):
             return
-
         # Get baseline answers
         n_few_shots_examples = self.prepare_examples(n_few_shots)
         system_template = self.get_system_template(n_few_shots_examples)

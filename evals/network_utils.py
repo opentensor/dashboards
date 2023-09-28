@@ -23,7 +23,7 @@ def check_uid_availability(metagraph: "bt.metagraph.Metagraph", uid: int):
     return is_uid_available
 
 
-def sample_n_from_top_100_incentive(n_sample:int, netuid: int = 1) -> List[int]:
+def sample_n_from_top_100_emission(n_sample:int, netuid: int = 1) -> List[int]:
     """Sample n uids from the top 100 uids with the highest incentive"""
     # Creates dataframe with uids, incentives and their ranks
     metagraph = bt.metagraph(netuid)
