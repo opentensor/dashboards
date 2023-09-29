@@ -4,8 +4,10 @@ import string
 import time
 import bittensor as bt
 from datasets import load_dataset
+from typing import Tuple
 from benchmarks import DatasetEval, prompt_confirmation_cost
 from openai_utils import OpenAIModel, calculate_openai_cost, get_completions
+from metrics import calculate_accuracy
 
 
 def shuffle_and_map_questions(data: dict):
@@ -155,11 +157,5 @@ Correct answer:
         return dataset
     
 
-    def evaluate_results(dataframe: pd.DataFrame) -> pd.DataFrame:
-        pattern = r'^([ABDC1234])\s?-?.*'
-        dataframe['clean_answers'] = dataframe['mc1_baseline_answer'].str.extract(pattern)[0]
-        dataframe['is_correct'] = dataframe['clean_answers'].str.lower() == dataframe['mc1_answer_key'].str.lower()
-
-        accuracy = dataframe['is_correct'].sum() / len(dataframe) * 100
-        print(f"Accuracy of: {accuracy}%")        
-        return dataframe
+    def evaluate_results(dataframe: pd.DataFrame, answer_column: str, answer_key: str) -> Tuple[pd.DataFrame, float]:
+        return calculate_accuracy(dataframe, answer_column, answer_key)

@@ -1,6 +1,10 @@
 import openai
+import asyncio
+import pandas as pd
+import bittensor as bt
+from types import SimpleNamespace
 from benchmarks import ArcDatasetEval, TruthfulQADatasetEval
-from openai_utils import get_completions, gpt_3_5_turbo, gpt4
+from openai_utils import gpt_3_5_turbo, gpt4
 from network_utils import sample_n_from_top_100_emission, evaluate_uids
 
 
@@ -38,14 +42,43 @@ def perform_truthful_qa_dataset():
 
     # Sample network
     uids = sample_n_from_top_100_emission(n_sample=10)
-    evaluate_uids(
+    uids_dict = asyncio.run(evaluate_uids(
         uids=uids, 
-        prompt_ids=df['prompt_id'].tolist(), 
-        prompts=df['prompt'].tolist(),
+        prompt_ids=df['mc1_prompt_id'].tolist(), 
+        prompts=df['mc1_prompt'].tolist(),
         output_path=output_path,
-    )
+        benchmark_name='truthfulqa',
+    ))
+
+    # Evaluate initial results and save summary results
+    summary_results = []
+    for uid, miner_df in uids_dict.items():
+        miner_df.rename(columns={'prompt_id': 'mc1_prompt_id'}, inplace=True)
+        if 'completion' not in miner_df.columns:
+            miner_df['completion'] = 'N/A'
+
+        dataframe = df.merge(miner_df, on='mc1_prompt_id')        
+        _, accuracy = tqa_eval(dataframe, 'completion', 'mc1_answer_key')
+
+        error_rate = sum(dataframe['return_code'].astype(str) != '1') / len(dataframe) * 100
+        
+        result = SimpleNamespace(
+            uid=uid,
+            accuracy=accuracy,
+            error_rate=error_rate,
+        )
+        summary_results.append(result)
+
+        bt.logging.info(f'UID: {uid}')
+        bt.logging.info(f'Accuracy: {accuracy} %')
+        bt.logging.info('-----------------')
+
+    summary_dicts = [ns.__dict__ for ns in summary_results]
+    summary_df = pd.DataFrame(summary_dicts, columns=['uids', 'accuracy', 'error_rate'])
+    summary_df.to_csv(output_path + '/truthfulqa_initial_results_summary.csv', index=False)
+
 
 
 if __name__ == '__main__':
-    openai.api_key = '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'
+    openai.api_key = 'YOUR_API_KEY'
     perform_arc_evaluation()

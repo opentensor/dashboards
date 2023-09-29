@@ -56,7 +56,7 @@ def sample_n_from_top_100_emission(n_sample:int, netuid: int = 1) -> List[int]:
     return samples_uids
 
 
-async def query_uid(dendrite, prompt:str, timeout:int=10, retries:int=5):
+async def query_uid(dendrite, prompt:str, timeout:int=10, retries:int=3):
     for i in range(retries):
         response : DendriteForwardCall = await dendrite.async_forward(
             roles=['user'],
@@ -69,7 +69,7 @@ async def query_uid(dendrite, prompt:str, timeout:int=10, retries:int=5):
             return response
         else:            
             bt.logging.error(f'Error on dendrite of UID {dendrite.uid}: RC: {response.return_code}, Attempt number: {i} ')
-            time.sleep(timeout * i) 
+            time.sleep(timeout) 
         
     return response
 
@@ -81,7 +81,7 @@ def export_df_to_hf(df, output_file):
     df.to_csv(output_file, index=False)
 
 
-async def evaluate_uid(dendrite, prompts: List[str], prompts_ids: List[str], output_path: str, block_stamp:int, rest_time:int=0):
+async def evaluate_uid(dendrite, prompts: List[str], prompts_ids: List[str], output_path: str, block_stamp:int, rest_time:int=0, benchmark_name:str='undefined'):
     """Evaluates a single UID with a list of prompts
     Args:
         dendrite: Dendrite instance
@@ -121,13 +121,13 @@ async def evaluate_uid(dendrite, prompts: List[str], prompts_ids: List[str], out
     df['uid'] = dendrite.uid
 
     # Export dataframe to hugging face
-    output_file = f'{output_path}/arc_net1_uid{dendrite.uid}.csv'
+    output_file = f'{output_path}/{benchmark_name}_net1_uid{dendrite.uid}.csv'
     export_df_to_hf(df, output_file)
     
     return df
 
 
-async def evaluate_uids(uids: List[int], prompt_ids: List[str], prompts: List[str], output_path: str):
+async def evaluate_uids(uids: List[int], prompt_ids: List[str], prompts: List[str], output_path: str, benchmark_name:str):
     """Evaluates a list of uids with a list of prompts
     Args:
         uids: List of uids to evaluate
@@ -151,7 +151,8 @@ async def evaluate_uids(uids: List[int], prompt_ids: List[str], prompts: List[st
                     prompts_ids=prompt_ids,
                     output_path=output_path,
                     block_stamp=metagraph.block.item(),            
-                    rest_time=3
+                    rest_time=3,
+                    benchmark_name=benchmark_name
                 ) for uid in uids]
         
         # Execute tasks concurrently and save results in a dictionary
