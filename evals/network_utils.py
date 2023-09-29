@@ -23,8 +23,13 @@ def check_uid_availability(metagraph: "bt.metagraph.Metagraph", uid: int):
     return is_uid_available
 
 
-def sample_n_from_top_100_emission(n_sample:int, netuid: int = 1) -> List[int]:
-    """Sample n uids from the top 100 uids with the highest incentive"""
+def sample_n_from_top_100_emission(n_sample:int, netuid: int = 1, inverse: bool = False) -> List[int]:
+    """Sample n uids from the top 100 uids with the highest incentive
+    Args:
+        n_sample: Number of uids to sample
+        netuid: Network id
+        inverse: If True, sample uids from the bottom 100 uids with the lowest incentive
+    """
     # Creates dataframe with uids, incentives and their ranks
     metagraph = bt.metagraph(netuid)
 
@@ -42,8 +47,10 @@ def sample_n_from_top_100_emission(n_sample:int, netuid: int = 1) -> List[int]:
     df['rank'] = df['emission'].rank(method='min', ascending=False).astype(int)
 
     # Sample n uids from the top 100 uids with the highest incentive
-    top_100 = df.sort_values(by='rank').head(100)
-    samples = top_100.sample(n_sample)
+    if inverse:
+        top_100 = df.sort_values(by='rank').head(100).sample(n_sample)
+    else:
+        samples = top_100
 
     # Get uids and ranks of the samples    
     samples_uids = samples['uid'].tolist()
@@ -69,7 +76,7 @@ async def query_uid(dendrite, prompt:str, timeout:int=10, retries:int=3):
             return response
         else:            
             bt.logging.error(f'Error on dendrite of UID {dendrite.uid}: RC: {response.return_code}, Attempt number: {i} ')
-            time.sleep(timeout) 
+            asyncio.sleep(timeout) 
         
     return response
 
