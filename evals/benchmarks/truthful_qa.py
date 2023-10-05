@@ -1,7 +1,6 @@
 import pandas as pd
 import random
 import string
-import time
 import bittensor as bt
 from datasets import load_dataset
 from typing import Tuple
