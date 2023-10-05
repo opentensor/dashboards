@@ -8,6 +8,7 @@ from typing import Tuple
 from benchmarks import DatasetEval, prompt_confirmation_cost
 from openai_utils import OpenAIModel, calculate_openai_cost, get_completions
 from metrics import calculate_accuracy
+from types import SimpleNamespace
 
 
 def shuffle_and_map_questions(data: dict):
@@ -156,6 +157,31 @@ Correct answer:
 
         return dataset
     
+    @staticmethod
+    def evaluate_results(uids_df_dict: dict, baseline_df: pd.DataFrame) -> pd.DataFrame:          
+        # Evaluate initial results and save summary results
+        summary_results = []
+        for uid, miner_df in uids_df_dict.items():
+            miner_df.rename(columns={'prompt_id': 'mc1_prompt_id'}, inplace=True)
+            if 'completion' not in miner_df.columns:
+                miner_df['completion'] = 'N/A'
 
-    def evaluate_results(dataframe: pd.DataFrame, answer_column: str, answer_key: str) -> Tuple[pd.DataFrame, float]:
-        return calculate_accuracy(dataframe, answer_column, answer_key)
+            dataframe = baseline_df.merge(miner_df, on='mc1_prompt_id')        
+            _, accuracy = calculate_accuracy(dataframe, 'completion', 'mc1_answer_key')
+
+            error_rate = sum(dataframe['return_code'].astype(str) != '1') / len(dataframe) * 100
+            
+            result = SimpleNamespace(
+                uid=uid,
+                accuracy=accuracy,
+                error_rate=error_rate,
+            )
+            summary_results.append(result)
+
+            bt.logging.info(f'UID: {uid}')
+            bt.logging.info(f'Accuracy: {accuracy} %')
+            bt.logging.info('-----------------')
+
+        summary_dicts = [ns.__dict__ for ns in summary_results]
+        summary_df = pd.DataFrame(summary_dicts, columns=['uid', 'accuracy', 'error_rate'])
+        return summary_df
