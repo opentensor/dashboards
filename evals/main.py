@@ -50,33 +50,12 @@ def perform_truthful_qa_dataset():
         benchmark_name='truthfulqa',
     ))
 
-    # Evaluate initial results and save summary results
-    summary_results = []
-    for uid, miner_df in uids_dict.items():
-        miner_df.rename(columns={'prompt_id': 'mc1_prompt_id'}, inplace=True)
-        if 'completion' not in miner_df.columns:
-            miner_df['completion'] = 'N/A'
-
-        dataframe = df.merge(miner_df, on='mc1_prompt_id')        
-        _, accuracy = tqa_eval(dataframe, 'completion', 'mc1_answer_key')
-
-        error_rate = sum(dataframe['return_code'].astype(str) != '1') / len(dataframe) * 100
-        
-        result = SimpleNamespace(
-            uid=uid,
-            accuracy=accuracy,
-            error_rate=error_rate,
-        )
-        summary_results.append(result)
-
-        bt.logging.info(f'UID: {uid}')
-        bt.logging.info(f'Accuracy: {accuracy} %')
-        bt.logging.info('-----------------')
-
-    summary_dicts = [ns.__dict__ for ns in summary_results]
-    summary_df = pd.DataFrame(summary_dicts, columns=['uids', 'accuracy', 'error_rate'])
-    summary_df.to_csv(output_path + '/truthfulqa_initial_results_summary.csv', index=False)
-
+    # Calculates initial results for each miner including their accuracy and error rate
+    summary_df = tqa_eval.evaluate_initial_results(
+        uids_dict=uids_dict,
+        baseline_df=df,
+    )
+    summary_df.to_csv(output_path + '/uids/truthfulqa_initial_results_summary.csv', index=False)
 
 
 if __name__ == '__main__':

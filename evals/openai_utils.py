@@ -24,6 +24,40 @@ gpt_3_5_turbo = OpenAIModel(input_price_per_1k_tokens=0.0015, output_price_per_1
 gpt4 = OpenAIModel(input_price_per_1k_tokens=0.03, output_price_per_1k_tokens=0.06, model_description="gpt4_8k-context", model_name="gpt-4")
 
 
+def concatenate_messages_into_txt_dialogue(messages):
+    str_template = "##{role}:\n{content}\n"
+
+    if messages is None:
+        return None
+
+    formatted_messages = []
+    for msg in messages:
+        formatted_message = str_template.format(role=msg['role'].upper(), content=msg['content'])
+        formatted_messages.append(formatted_message)
+
+    return '\n'.join(formatted_messages)
+
+
+def engage_conversation(turns: List[str], model:str, temperature:float = 0.0, max_tokens:int = 1000) -> List[dict]:
+    system_prompt_message = {"role": "system", "content": "You are a helpful assistant."}
+    messages = [system_prompt_message]
+
+    for turn in turns:
+        messages.append({"role": "user", "content": turn})
+
+        response = openai.ChatCompletion.create(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )        
+
+        response_content = response['choices'][0]['message']['content']
+        messages.append({"role": "assistant", "content": response_content})
+    
+    return messages
+
+
 @lru_cache(maxsize=10_000)
 def get_response_from_openai(system_prompt: str, prompt: str, model: str = gpt_3_5_turbo.model_name, max_tokens:int=1000) -> str:    
     response = openai.ChatCompletion.create(
