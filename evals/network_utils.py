@@ -62,16 +62,18 @@ def sample_n_from_top_100_emission(n_sample:int, netuid: int = 1, inverse: bool 
     return samples_uids
 
 
-async def query_uid(dendrite: "bt.dendrite", axon: "bt.axon", prompt:str, timeout:int=10, retries:int=3):
+async def query_uid(dendrite: "bt.dendrite", axon: "bt.axon", uid:int, prompt:str, timeout:int=10, retries:int=3):
     synapse = prompting.protocol.Prompting(roles=["user"], messages=[prompt])
 
     for i in range(retries):
-        response:bt.Synapse  = await dendrite(axons=[axon], synapse=synapse,timeout=timeout)
+        synapse_result:bt.Synapse  = await dendrite(axons=[axon], synapse=synapse,timeout=timeout)
+        # Extracts the single expected response
+        response = synapse_result[0]
 
-        if str(response.dendrite.status_code) == '1':
+        if str(response.dendrite.status_code) == '200':
             return response
         else:            
-            bt.logging.error(f'Error on dendrite of UID {dendrite.uid}: RC: {response.return_code}, Attempt number: {i} ')
+            bt.logging.error(f'Error on dendrite of UID {uid}: RC: {response.dendrite.status_code}, Attempt number: {i} ')
             asyncio.sleep(timeout) 
         
     return response
@@ -97,8 +99,8 @@ async def evaluate_uid(
     dendrite: bt.dendrite,
     axon : bt.axon,
     uid: int,
-    prompts: List[str], 
-    prompts_ids: Union[List[str], List[List[str]]], 
+    prompts: Union[List[str], List[List[str]]],
+    prompts_ids: List[str],
     output_path: str, 
     block_stamp:int, 
     rest_time:int=0, 
@@ -124,56 +126,71 @@ async def evaluate_uid(
 
         for multi_turn_prompt in pbar:
             conversation_logs = []
+            turn_responses = []
             concatenated_prompt = ''
 
             for turn in multi_turn_prompt:
                 conversation_logs.append({"role": "user", "content": turn})
                 concatenated_prompt += f'{turn}\n'
 
-                response = asyncio.run(query_uid(dendrite=dendrite, axon=axon, prompt=concatenated_prompt))
+                response = asyncio.run(query_uid(dendrite=dendrite, axon=axon, uid=uid, prompt=concatenated_prompt))
+                # Adds the single response to the conversation log
+                concatenated_prompt += f'{response.completion}\n'                
+                conversation_logs.append({"role": "assistant", "content": response.completion})
+                turn_responses.append(response)                
+
+            if rest_time > 0:
+                await asyncio.sleep(rest_time)    
+
+            if str(response.dendrite.status_code) != '200':
+                non_successful_calls += 1
+                pbar.set_postfix({"non_successful_calls": non_successful_calls}, refresh=True)
+                pbar.update(1)
+
+            all_conversation_logs.append(conversation_logs)
+            responses.append(turn_responses)
+  
+        # Transform responses to nested dataframe
+        df = pd.DataFrame.from_dict({
+            'responses': responses,
+            'conversation_log': all_conversation_logs,
+            'prompt_id': prompts_ids,
+            'prompt': prompts,                                    
+        })   
                 
-                concatenated_prompt += f'{response.messages}\n'                
-                conversation_logs.append({"role": "assistant", "content": response})
-                responses.append(response)                
-
-                if rest_time > 0:
-                    await asyncio.sleep(rest_time)    
-
-            all_conversation_logs.append(conversation_logs)                   
+        df['block_stamp'] = block_stamp
+        df['uid'] = uid        
+        df['concatenated_conversation'] = df['conversation_log'].apply(concatenate_messages_into_txt_dialogue)
     else:        
-        pbar = tqdm(prompts, desc=f"UID {uid}", position=dendrite.uid)
+        pbar = tqdm(prompts, desc=f"UID {uid}", position=uid)
         for prompt in pbar:            
-            response = asyncio.run(query_uid(dendrite=dendrite, axon=axon, prompt=prompt))
+            response = asyncio.run(query_uid(dendrite=dendrite, uid=uid, axon=axon, prompt=prompt))
             responses.append(response)
 
             if rest_time > 0:
                 await asyncio.sleep(rest_time)            
 
-            if str(response.return_code) != '1':
+            if str(response.dendrite.status_code) != '200':
                 non_successful_calls += 1
                 pbar.set_postfix({"non_successful_calls": non_successful_calls}, refresh=True)
                 pbar.update(1)
     
-    # Transform responses to dictionaries
-    data = {}
-    for idx, obj in enumerate(responses):
-        obj_dict = vars(obj)
-        data[idx] = obj_dict
-
-    # Create dataframe
-    df = pd.DataFrame.from_dict(data, orient='index')
-    df['prompt_id'] = prompts_ids
-    df['prompt'] = prompts
-    df['block_stamp'] = block_stamp
-    df['uid'] = uid
-
-    if multiturn_prompts:
-        df['conversation_log'] = all_conversation_logs
-        df['concatenated_conversation'] = df['conversation_log'].apply(concatenate_messages_into_txt_dialogue)        
+            # Transform responses to dictionaries
+            data = {}
+            for idx, obj in enumerate(responses):
+                obj_dict = vars(obj)
+                data[idx] = obj_dict
+    
+            # Create dataframe
+            df = pd.DataFrame.from_dict(data, orient='index')
+            df['prompt_id'] = prompts_ids
+            df['prompt'] = prompts
+            df['block_stamp'] = block_stamp
+            df['uid'] = uid        
 
     # Export dataframe to hugging face
-    output_file = f'{output_path}/{benchmark_name}_net1_uid{dendrite.uid}.csv'
-    export_df_to_hf(df, output_file)
+    #output_file = f'{output_path}/{benchmark_name}_net1_uid{uid}.csv'
+    #export_df_to_hf(df, output_file)
     
     return df
 
