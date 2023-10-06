@@ -7,13 +7,12 @@ import tqdm
 import concurrent.futures
 import time
 import bittensor as bt
-from openai_utils import (    
-    engage_conversation, 
+from openai_utils import (
+    engage_conversation,
     concatenate_messages_into_txt_dialogue,
     calculate_openai_cost,
     OpenAIModel
 )
-
 
 # Downloads directly from GitHub since lmsys did not upload the dataset to HuggingFace
 QUESTION_DATASET_URL = "https://raw.githubusercontent.com/lm-sys/FastChat/c3ad73a854c912132683b0a6b3df06596040385c/fastchat/llm_judge/data/mt_bench/question.jsonl"
@@ -42,7 +41,6 @@ class MTBenchDatasetEval(DatasetEval):
     def prepare_examples(dataset: pd.DataFrame) -> pd.DataFrame:
         pass
 
-
     def load_dataset(self) -> pd.DataFrame:
         dataset = download_jsonl_dataset(QUESTION_DATASET_URL)
         return dataset
@@ -54,7 +52,7 @@ class MTBenchDatasetEval(DatasetEval):
         max_retries_per_conv: int = 5
     ) -> pd.DataFrame:
         # Loads the dataset
-        dataframe = self.load_dataset()[:5]
+        dataframe = self.load_dataset()
         dataframe['concatenated_inputs'] = dataframe['turns'].apply(' '.join)
         # Calculate cost
         dataframe = calculate_openai_cost(dataframe, 'concatenated_inputs', model, max_token_output=1000)

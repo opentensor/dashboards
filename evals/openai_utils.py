@@ -26,7 +26,16 @@ gpt4 = OpenAIModel(input_price_per_1k_tokens=0.03, output_price_per_1k_tokens=0.
 
 def concatenate_messages_into_txt_dialogue(messages):
     str_template = "##{role}:\n{content}\n"
-    return '\n'.join([str_template.format(role=msg['role'].upper(), content=msg['content']) for msg in messages])
+
+    if messages is None:
+        return None
+
+    formatted_messages = []
+    for msg in messages:
+        formatted_message = str_template.format(role=msg['role'].upper(), content=msg['content'])
+        formatted_messages.append(formatted_message)
+
+    return '\n'.join(formatted_messages)
 
 
 def engage_conversation(turns: List[str], model:str, temperature:float = 0.0, max_tokens:int = 1000) -> List[dict]:
