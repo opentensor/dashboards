@@ -16,7 +16,7 @@ from IPython.display import display
 api= wandb.Api(timeout=60)
 wandb.login(anonymous="allow")
 
-def pull_wandb_runs(project='openvalidators', filters=None, min_steps=50, max_steps=100_000, ntop=10, netuid=None, summary_filters=None ):
+def pull_wandb_runs(project='opentensor-dev/openvalidators', filters=None, min_steps=50, max_steps=100_000, ntop=10, netuid=None, summary_filters=None ):
     # TODO: speed this up by storing older runs
 
     all_runs = api.runs(project, filters=filters)
@@ -129,7 +129,7 @@ def load_data(run_id, run_path=None, load=True, save=False, explode=True):
 
         # Clean and explode dataframe
         # overwrite object to free memory
-        float_cols = df.filter(regex='reward').columns
+        float_cols = df.filter(regex='reward|filter').columns
         df = explode_data(clean_data(df)).astype({c: float for c in float_cols}).fillna({c: 0 for c in float_cols})
 
         if save:
@@ -155,6 +155,7 @@ def calculate_stats(df_long, freq='H', save_path=None, ntop=3 ):
 
     run_id = df_long['run_id'].iloc[0]
     # print(f'Calculating stats for run {run_id!r} dataframe with shape {df_long.shape}')
+
 
     # Approximate number of tokens in each completion
     df_long['completion_num_tokens'] = (df_long['completions'].astype(str).str.split().str.len() / 0.75).round()
