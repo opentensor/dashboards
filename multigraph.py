@@ -38,7 +38,13 @@ def process(block, netuid=1, lite=True, difficulty=False, prune_weights=False, r
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='Process metagraphs for a given network.')
+    example_usage = """
+    SN1 metagraphs for most recent 30 days without weights: python multigraph.py --lite --netuid 1 --step_size 7200 --num_blocks 30
+    SN0 metagraphs for most recent 12 hours with weights:   python multigraph.py --lite --netuid 0 --step_size 300 --num_blocks 12
+    """
+    parser = argparse.ArgumentParser(description=f'Process metagraphs for a given network.',
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     epilog=f'\nExamples:\n{example_usage}')
     parser.add_argument('--netuid', type=int, default=1, help='Network UID to use.')
     parser.add_argument('--lite', action='store_true', help='Do not include weights.')
     parser.add_argument('--difficulty', action='store_true', help='Include difficulty in metagraph.')
