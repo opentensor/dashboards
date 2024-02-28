@@ -36,19 +36,21 @@ def YC1(T, a=0.5, b=10):
     return torch.sigmoid( b * (T - a) )
 
 
-def load_metagraphs(root_dir, netuid):
+def load_metagraphs(root_dir, netuid, block_min=0, block_max=3_000_000):
 
     metagraphs = []
     match_path = os.path.join(root_dir, str(netuid), '*.pkl')
     files = glob.glob(match_path)
     print(f'Found {len(files)} metagraphs in {match_path}')
     for path in tqdm.tqdm(files):
-
+        block = int(path.split('/')[-1].split('.')[0])
+        if not block_min <= block <= block_max:
+            continue
         with open(path, 'rb') as f:
             metagraph = pickle.load(f)
             metagraphs.append(metagraph)
 
-    return metagraphs
+    return sorted(metagraphs, key=lambda x: x.block)
 
 
 # TODO: can calculate the emission trend using each subnet or just using root subnet
@@ -119,11 +121,11 @@ def make_dataframe_old(metagraphs, netuid):
     df.sort_values(by=['block','netuid'], inplace=True)
     return df
 
-def make_dataframe(root_dir, netuid, cols=None):
+def make_dataframe(root_dir, netuid, cols=None, block_min=0, block_max=3_000_000, weights=False):
     if cols is None:
         cols = ['stake','emission','trust','validator_trust','dividends','incentive','R', 'consensus','validator_permit']
     frames = []
-    metagraphs = load_metagraphs(root_dir, netuid)
+    metagraphs = load_metagraphs(root_dir, netuid, block_min, block_max)
     print(f'Loaded {len(metagraphs)} metagraphs for netuid {netuid}')
     for m in metagraphs:
         frame = pd.DataFrame({k: getattr(m, k) for k in cols})
@@ -133,5 +135,9 @@ def make_dataframe(root_dir, netuid, cols=None):
         frame['uid'] = range(len(frame))
         frame['hotkey'] = [axon.hotkey for axon in m.axons]
         frame['coldkey'] = [axon.coldkey for axon in m.axons]
+        if weights and m.W is not None:
+            # convert NxN tensor to a list of lists so it fits into the dataframe
+            frame['weights'] = [w.tolist() for w in m.W]
+            
         frames.append(frame)
     return pd.concat(frames).sort_values(by=['timestamp','block','uid'])

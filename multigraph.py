@@ -46,7 +46,7 @@ def parse_arguments():
     parser.add_argument('--return_graph', action='store_true', help='Return metagraph instead of True.')
     parser.add_argument('--no_dataframe', action='store_true', help='Do not create dataframe.')
     parser.add_argument('--max_workers', type=int, default=32, help='Max workers to use.')
-    parser.add_argument('--start_block', type=int, default=1_500_000, help='Start block.')
+    parser.add_argument('--start_block', type=int, default=None, help='Start block.')
     parser.add_argument('--num_blocks', type=int, default=0, help='Number of blocks.')
     parser.add_argument('--end_block', type=int, default=600_000, help='End block.')
     parser.add_argument('--step_size', type=int, default=100, help='Step size.')
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     return_graph=args.return_graph
 
     step_size = args.step_size
-    start_block = args.start_block
+    start_block = args.start_block or subtensor.get_current_block()
     start_block = (min(subtensor.block, start_block)//step_size)*step_size # round to nearest step_size
     if args.num_blocks:
         end_block = start_block - int(args.num_blocks*step_size)
