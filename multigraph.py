@@ -10,6 +10,7 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import torch
 import bittensor
 from meta_utils import load_metagraphs
+from meta2frame import make_dataframe
 #TODO: make line charts and other cool stuff for each metagraph snapshot
 
 def process(block, netuid=1, lite=True, difficulty=False, prune_weights=False, return_graph=False, half=True, subtensor=None):
@@ -128,18 +129,9 @@ if __name__ == '__main__':
 
     if not args.no_dataframe:
         save_path = f'data/metagraph/{netuid}/df.parquet'
-        blocks = range(start_block, end_block, step_size)
-        df_loaded = None
-        if os.path.exists(save_path):
-            df_loaded = pd.read_parquet(save_path)
-            blocks = [block for block in blocks if block not in df_loaded.block.unique()]
-            print(f'Loaded dataframe from {save_path!r}. {len(df_loaded)} rows. {len(blocks)} blocks to process.')
-            if len(blocks)==0:
-                print('No blocks to process.')
-                sys.exit(0)
-
-        df = load_metagraphs(blocks[0], blocks[-1], block_step=step_size, datadir=datadir)
-        if df_loaded is not None:
-            df = pd.concat([df, df_loaded], ignore_index=True)
+        blocks = range(start_block, end_block, -step_size)
+        print(f'Making a dataframe for {len(blocks)} blocks in {blocks}')
+        
+        df = make_dataframe(netuid = netuid, block_min = min(blocks), block_max = max(blocks), weights = not lite)
         df.to_parquet(save_path)
         print(f'Saved dataframe to {save_path!r}')

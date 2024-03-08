@@ -21,8 +21,8 @@ def load_metagraphs(root_dir, netuid, block_min=0, block_max=3_000_000):
     print(f'Found {len(files)} metagraphs in {match_path}')
 
     valid_files = [path for path in files if block_min <= int(path.split('/')[-1].split('.')[0]) <= block_max]
-    print(f'Found {len(valid_files)} valid metagraphs between {block_min} and {block_max}')
-    for path in tqdm.tqdm(valid_files):
+    pbar = tqdm.tqdm(valid_files, desc=f'Loading {len(valid_files)} metagraph snapshots')
+    for path in pbar:
 
         with open(path, 'rb') as f:
             metagraph = pickle.load(f)
@@ -48,7 +48,7 @@ def block_to_time(blocks, subtensor=None):
 
     timestamps = {}
     unique_blocks = set(blocks)
-    for block in tqdm.tqdm(unique_blocks):
+    for block in tqdm.tqdm(unique_blocks, desc=f'Mapping {len(unique_blocks)} blocks to timestamps'):
         timestamps[block] = get_block_timestamp(block, subtensor)
 
     return blocks.map(timestamps).apply(pd.to_datetime, unit='ms')
@@ -59,7 +59,7 @@ def make_dataframe(netuid, root_dir=ROOT_DIR, cols=None, block_min=0, block_max=
         cols = ['stake','emission','trust','validator_trust','dividends','incentive','R', 'consensus','validator_permit']
     frames = []
     metagraphs = load_metagraphs(root_dir, netuid, block_min, block_max)
-    print(f'Loaded {len(metagraphs)} metagraphs for netuid {netuid}')
+
     for m in metagraphs:
         frame = pd.DataFrame({k: getattr(m, k) for k in cols})
         frame['block'] = m.block.item()
