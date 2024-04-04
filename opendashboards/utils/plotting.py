@@ -28,6 +28,22 @@ from typing import List, Union
 
 plotly_config = {"width": 800, "height": 600, "template": "plotly_white"}
 
+def plot_gantt(df_runs: pd.DataFrame, y='username'):
+    fig = px.timeline(df_runs,
+                x_start="start_time", x_end="end_time", y=y, color="state",
+                title="Timeline of WandB Runs",
+                category_orders={'run_name': df_runs.run_name.unique()},
+                hover_name="run_name",
+                hover_data=[col for col in ['hotkey','user','username','run_id','num_steps','num_completions'] if col in df_runs],
+                color_discrete_map={'running': 'green', 'finished': 'grey', 'killed':'blue', 'crashed':'orange', 'failed': 'red'},
+                opacity=0.3,
+                width=1200,
+                height=800,
+                template="plotly_white",
+    )
+    # remove y axis ticks
+    fig.update_yaxes(tickfont_size=8, title='')
+    return fig
 
 def plot_throughput(df: pd.DataFrame, n_minutes: int = 10) -> go.Figure:
     """Plot throughput of event log.

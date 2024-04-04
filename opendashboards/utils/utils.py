@@ -16,12 +16,70 @@
 # DEALINGS IN THE SOFTWARE.
 
 import os
+import re
 import tqdm
 import wandb
 import pandas as pd
+
+from traceback import format_exc
 from pandas.api.types import is_list_like
 
 from typing import List, Dict, Any, Union
+
+
+def pull_wandb_runs(project='openvalidators', filters=None, min_steps=50, ntop=10, summary_filters=None ):
+    all_runs = get_runs(project, filters)
+    print(f'Using {ntop}/{len(all_runs)} runs with more than {min_steps} events')
+    pbar = tqdm.tqdm(all_runs)
+    runs = []
+    n_events = 0
+    successful = 0
+    for i, run in enumerate(pbar):
+
+        summary = run.summary
+        if summary_filters is not None and not summary_filters(summary):
+            continue
+        step = summary.get('_step',0)
+        if step < min_steps:
+            # warnings.warn(f'Skipped run `{run.name}` because it contains {step} events (<{min_steps})')
+            continue
+
+        prog_msg = f'Loading data {i/len(all_runs)*100:.0f}% ({successful}/{len(all_runs)} runs, {n_events} events)'
+        pbar.set_description(f'{prog_msg}... **fetching** `{run.name}`')
+
+        duration = summary.get('_runtime')
+        end_time = summary.get('_timestamp')
+        # extract values for selected tags
+        rules = {'hotkey': re.compile('^[0-9a-z]{48}$',re.IGNORECASE), 'version': re.compile('^\\d\.\\d+\.\\d+$'), 'spec_version': re.compile('\\d{4}$')}
+        tags = {k: tag for k, rule in rules.items() for tag in run.tags if rule.match(tag)}
+        # include bool flag for remaining tags
+        tags.update({k: True for k in run.tags if k not in tags.keys() and k not in tags.values()})
+
+        runs.append({
+            'state': run.state,
+            'num_steps': step,
+            'num_completions': step*sum(len(v) for k, v in run.summary.items() if k.endswith('completions') and isinstance(v, list)),
+            'entity': run.entity,
+            'user': run.user.name,
+            'username': run.user.username,
+            'run_id': run.id,
+            'run_name': run.name,
+            'project': run.project,
+            'run_url': run.url,
+            'run_path': os.path.join(run.entity, run.project, run.id),
+            'start_time': pd.to_datetime(end_time-duration, unit="s"),
+            'end_time': pd.to_datetime(end_time, unit="s"),
+            'duration': pd.to_timedelta(duration, unit="s").round('s'),
+            **tags
+        })
+        n_events += step
+        successful += 1
+        if successful >= ntop:
+            break
+
+    cat_cols = ['state', 'hotkey', 'version', 'spec_version']
+    return pd.DataFrame(runs).astype({k: 'category' for k in cat_cols if k in runs[0]})
+
 
 
 def get_runs(project: str = "openvalidators", filters: Dict[str, Any] = None, return_paths: bool = False, api_key: str = None) -> List:
@@ -82,7 +140,7 @@ def download_data(run_path: Union[str, List] = None, timeout: float = 600, api_k
     return df
 
 
-def load_data(path: str, nrows: int = None):
+def read_data(path: str, nrows: int = None):
     """Load data from csv."""
     df = pd.read_csv(path, nrows=nrows)
     # filter out events with missing step length
@@ -92,8 +150,55 @@ def load_data(path: str, nrows: int = None):
     list_cols = [c for c in df.columns if df[c].dtype == "object" and df[c].str.startswith("[").all()]
     # convert string representation of list to list
     df[list_cols] = df[list_cols].applymap(eval, na_action='ignore')
-    
+
     return df
+
+def load_data(selected_runs, load=True, save=False, explode=True, datadir='data/'):
+
+    frames = []
+    n_events = 0
+    successful = 0
+    if not os.path.exists(datadir):
+        os.makedirs(datadir)
+
+    pbar = tqdm.tqdm(selected_runs.index, desc="Loading runs", total=len(selected_runs), unit="run")
+    for i, idx in enumerate(pbar):
+        run = selected_runs.loc[idx]
+        prog_msg = f'Loading data {i/len(selected_runs)*100:.0f}% ({successful}/{len(selected_runs)} runs, {n_events} events)'
+
+        file_path = os.path.join(datadir,f'history-{run.run_id}.csv')
+
+        if (load is True and os.path.exists(file_path)) or (callable(load) and load(run.to_dict())):
+            pbar.set_description(f'{prog_msg}... **reading** `{file_path}`')
+            try:
+                df = read_data(file_path)
+            except Exception as e:
+                print(f'Failed to load history from `{file_path}`: {format_exc(e)}')
+                continue
+        else:
+            pbar.set_description(f'{prog_msg}... **downloading** `{run.run_path}`')
+            try:
+                # Download the history from wandb and add metadata
+                df = download_data(run.run_path).assign(**run.to_dict())
+                if explode:
+                    df = explode_data(df)
+
+                print(f'Downloaded {df.shape[0]} events from `{run.run_path}`. Columns: {df.columns}')
+
+                if save is True or (callable(save) and save(run.to_dict())):
+                    df.to_csv(file_path, index=False)
+                    print(f'Saved {df.shape[0]} events to `{file_path}`')
+
+            except Exception as e:
+                print(f'Failed to download history for `{run.run_path}`: {e}')
+                continue
+
+        frames.append(df)
+        n_events += df.shape[0]
+        successful += 1
+
+    # Remove rows which contain chain weights as it messes up schema
+    return pd.concat(frames)
 
 
 def explode_data(df: pd.DataFrame, list_cols: List[str] = None, list_len: int = None) -> pd.DataFrame:
