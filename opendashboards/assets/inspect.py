@@ -4,6 +4,13 @@ import pandas as pd
 import opendashboards.utils.utils as utils
 
 def clean_data(df):
+    task_map = {
+        'question-answering': 'QA',
+        'summarization': 'Summarization',
+        'date-based question answering': 'Date QA',
+        'math': 'Math'
+    }
+    df['task'] = df.task.map(task_map)
     return df.dropna(subset=df.filter(regex='completions|rewards').columns, how='any')
 
 @st.cache_data
