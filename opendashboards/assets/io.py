@@ -39,7 +39,7 @@ def load_runs(project, filters, min_steps=10):
         rules = {'hotkey': re.compile('^[0-9a-z]{48}$',re.IGNORECASE), 'version': re.compile('^\\d\.\\d+\.\\d+$'), 'spec_version': re.compile('\\d{4}$')}
         tags = {k: tag for k, rule in rules.items() for tag in run.tags if rule.match(tag)}
         # include bool flag for remaining tags
-        tags.update({k: k in run.tags for k in ('mock','custom_gating_model','nsfw_filter','outsource_scoring','disable_set_weights')})
+        tags.update({k: k in run.tags for k in ('mock','disable_set_weights')})
 
         runs.append({
             'state': run.state,
@@ -61,7 +61,9 @@ def load_runs(project, filters, min_steps=10):
 
     progress.empty()
     msg.empty()
-    return pd.DataFrame(runs).astype({'state': 'category', 'hotkey': 'category', 'version': 'category', 'spec_version': 'category'})
+    frame = pd.DataFrame(runs)
+    mappings = {'state': 'category', 'hotkey': 'category', 'version': 'category', 'spec_version': 'category'}
+    return frame.astype({k:v for k,v in mappings.items() if k in frame.columns})
 
 
 @st.cache_data

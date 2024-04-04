@@ -8,7 +8,7 @@ from opendashboards.assets import io, inspect, metric, plot
 # cache individual file loads
 # Hotkey churn
 
-DEFAULT_PROJECT = "openvalidators"
+DEFAULT_PROJECT = "alpha-validators"
 DEFAULT_FILTERS = {"tags": {"$in": [f'1.1.{i}' for i in range(10)]}}
 DEFAULT_SELECTED_HOTKEYS = None
 DEFAULT_SRC = 'followup'
@@ -23,7 +23,7 @@ st.set_page_config(
         'About': """
         This dashboard is part of the OpenTensor project. \n
         To see runs in wandb, go to: \n
-        https://wandb.ai/opentensor-dev/openvalidators/table?workspace=default
+        https://wandb.ai/opentensor-dev/alpha-validators/table?workspace=default
         """
     },
     layout = "centered"
@@ -82,7 +82,8 @@ with tab1:
         st.dataframe(df_long.head(num_rows) if use_long_checkbox else df.head(num_rows),
                      use_container_width=True)
 
-step_types = ['all']+['augment','followup','answer']#list(df.name.unique())
+# step_types = ['all']+['augment','followup','answer']#list(df.name.unique())
+step_types = ['all']+list(df.task.unique())
 
 ### UID Health ###
 # TODO: Live time - time elapsed since moving_averaged_score for selected UID was 0 (lower bound so use >Time)
@@ -93,8 +94,8 @@ with tab2:
     st.subheader("UID :violet[Health]")
     st.info(f"Showing UID health metrics for **{n_runs} selected runs**")
 
-    uid_src = st.radio('Select event type:', step_types, horizontal=True, key='uid_src')
-    df_uid = df_long[df_long.name.str.contains(uid_src)] if uid_src != 'all' else df_long
+    uid_src = st.radio('Select task type:', step_types, horizontal=True, key='uid_src')
+    df_uid = df_long[df_long.task.str.contains(uid_src)] if uid_src != 'all' else df_long
         
     metric.uids(df_uid, uid_src)
     uids = st.multiselect('UID:', sorted(df_uid['uids'].unique()), key='uid')
@@ -154,8 +155,8 @@ with tab3:
 
     msg_col1, msg_col2 = st.columns(2)
     # completion_src = msg_col1.radio('Select one:', ['followup', 'answer'], horizontal=True, key='completion_src')
-    completion_src = st.radio('Select event type:', step_types, horizontal=True, key='completion_src')
-    df_comp = df_long[df_long.name.str.contains(completion_src)] if completion_src != 'all' else df_long
+    completion_src = st.radio('Select task type:', step_types, horizontal=True, key='completion_src')
+    df_comp = df_long[df_long.task.str.contains(completion_src)] if completion_src != 'all' else df_long
     
     completion_info.info(f"Showing **{completion_src}** completions for **{n_runs} selected runs**")
 
@@ -204,7 +205,7 @@ with tab3:
             df_comp,
             completion_col='completions',
             uid_col='uids',
-            time_col='completion_times',
+            time_col='timings',
             length_opt=completion_length_radio,
         )
 

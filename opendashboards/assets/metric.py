@@ -44,8 +44,7 @@ def runs(df_long):
     col3.metric('Events', fmt(df_long.groupby(['run_id','_step']).ngroups))
     col4.metric('Completions', fmt(df_long.shape[0]))
     
-    name_type = df_long.name.apply(lambda x: x if not x[-1].isdigit() else x[:-1])
-    aggs = df_long.groupby(name_type).agg({'uids': 'nunique', 'completions': 'nunique'})
+    aggs = df_long.groupby('task').agg({'uids': 'nunique', 'completions': 'nunique'})
     print(aggs)
     for i,c in enumerate(st.columns(len(aggs))):
         name = aggs.index[i].title()
