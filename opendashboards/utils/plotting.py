@@ -310,7 +310,7 @@ def plot_completion_length_time(
     df: pd.DataFrame,
     uid_col: str = "uids",
     completion_col: str = "completions",
-    time_col: str = "completion_times",
+    time_col: str = "timings",
     uids: List[int] = None,
     length_opt: str = 'characters',
 ) -> go.Figure:
